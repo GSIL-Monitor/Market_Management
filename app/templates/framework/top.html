@@ -1,0 +1,37 @@
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-brand" href="#">Glitter Group <span class="market"></span></a>
+
+  <div class="collapse navbar-collapse" id="navbarSupportedContent">
+    <ul class="navbar-nav ml-auto">
+        <li class="nav-item dropdown">
+            <a class="nav-link markets dropdown-toggle" data-toggle="dropdown" href="#" role="button">产品管理</a>
+            <div class="dropdown-menu"><!-- 
+              <a class="dropdown-item" href="#">Action</a>
+              <a class="dropdown-item" href="#">Another action</a>
+              <a class="dropdown-item" href="#">Something else here</a>
+              <div class="dropdown-divider"></div>
+              <a class="dropdown-item" href="#">Separated link</a> -->
+              {% for name, market in markets.items() %}
+                <a class="dropdown-item" href="/markets/{{name}}">{{name}}</a>
+              {% endfor %}
+            </div>
+        </li>
+        <li class="nav-item dropdown">
+            <a class="nav-link p4p dropdown-toggle" data-toggle="dropdown" href="#" role="button">直 通 车</a>
+            <div class="dropdown-menu"><!-- 
+              <a class="dropdown-item" href="#">Action</a>
+              <a class="dropdown-item" href="#">Another action</a>
+              <a class="dropdown-item" href="#">Something else here</a>
+              <div class="dropdown-divider"></div>
+              <a class="dropdown-item" href="#">Separated link</a> -->
+              {% for name, market in markets.items() %}
+                <a class="dropdown-item" href="/p4p/{{name}}">{{name}}</a>
+              {% endfor %}
+            </div>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link settings" href="/settings">设 置</a>
+        </li>
+    </ul>
+  </div>
+</nav>

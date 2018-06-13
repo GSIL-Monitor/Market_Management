@@ -1,0 +1,33 @@
+{
+    "isIndividual":false,
+    "product_pictures":[],
+    "product_picture":{
+        "pcode":"0",
+        "pscode":"1"
+    },
+    "selections":[
+        {
+            "selector":".glitter_product_title",
+            "type":"title"
+        },
+        {
+            "selector":".glitter_product_img_1",
+            "type":"tag_img",
+            "pcode":"0",
+            "pscode":"3"
+        },
+        {
+            "selector":".glitter_product_img_2",
+            "type":"tag_img",
+            "pcode":"0",
+            "pscode":"5"
+        },
+        {
+            "selector":".glitter_product_img_3",
+            "type":"tag_img",
+            "pcode":"1",
+            "pscode":"2"
+        }
+    ],
+    "template":"<p style=\"margin: 0px; padding: 0px; color: #000000; font-family: Arial; font-size: 12px; font-style: normal; font-weight: normal; text-align: center;\">&nbsp;<strong><span class=\"glitter_product_title\" style=\"font-size: 18px;\">Very Soft High Quality 3d Silk Mink Eyelashes Private Label Eyelash Packaging</span></strong></p>\n<p style=\"margin: 0px; padding: 0px; color: #000000; font-family: Arial; font-size: 12px; font-style: normal; font-weight: normal; text-align: center;\">&nbsp;</p>\n<p style=\"margin: 0px; padding: 0px; color: #000000; font-family: Arial; font-size: 12px; font-style: normal; font-weight: normal;\"><img src=\"//sc02.alicdn.com/kf/HTB13Tbmd98YBeNkSnb4q6yevFXaG/231186930/HTB13Tbmd98YBeNkSnb4q6yevFXaG.jpg\" alt=\" Premium 3d fiber silk synthetic false eyelashes\" ori-width=\"750\" ori-height=\"892\" /></p>\n<p style=\"margin: 0px; padding: 0px; color: #000000; font-family: Arial; font-size: 12px; font-style: normal; font-weight: normal;\"><img class=\"glitter_product_img_1\" src=\"//sc01.alicdn.com/kf/HTB1LOWnnMmTBuNjy1Xbq6yMrVXa6/231186930/HTB1LOWnnMmTBuNjy1Xbq6yMrVXa6.jpg\" alt=\"Very Soft High Quality 3d Silk Mink Eyelashes Private Label Eyelash Packaging\" ori-width=\"750\" ori-height=\"360\" /></p>\n<p style=\"margin: 0px; padding: 0px; color: #000000; font-family: Arial; font-size: 12px; font-style: normal; font-weight: normal;\">&nbsp;</p>\n<p style=\"margin: 0px; padding: 0px; color: #000000; font-family: Arial; font-size: 12px; font-style: normal; font-weight: normal;\"><img  class=\"glitter_product_img_2\" src=\"//sc02.alicdn.com/kf/HTB1YkaCnMaTBuNjSszfq6xgfpXav/231186930/HTB1YkaCnMaTBuNjSszfq6xgfpXav.jpg\" alt=\"Very Soft High Quality 3d Silk Mink Eyelashes Private Label Eyelash Packaging\" ori-width=\"750\" ori-height=\"360\" /></p>\n<p style=\"margin: 0px; padding: 0px; color: #000000; font-family: Arial; font-size: 12px; font-style: normal; font-weight: normal;\">&nbsp;</p>\n<p style=\"margin: 0px; padding: 0px; color: #000000; font-family: Arial; font-size: 12px; font-style: normal; font-weight: normal;\"><img  class=\"glitter_product_img_3\" src=\"//sc01.alicdn.com/kf/HTB1kohQfwKTBuNkSne1q6yJoXXa8/231186930/HTB1kohQfwKTBuNkSne1q6yJoXXa8.jpg\" alt=\"Very Soft High Quality 3d Silk Mink Eyelashes Private Label Eyelash Packaging\" ori-width=\"750\" ori-height=\"360\" /></p>\n<p style=\"margin: 0px; padding: 0px; color: #000000; font-family: Arial; font-size: 12px; font-style: normal; font-weight: normal;\">&nbsp;</p>\n<p style=\"margin: 0px; padding: 0px; color: #000000; font-family: Arial; font-size: 12px; font-style: normal; font-weight: normal;\"><img src=\"//sc02.alicdn.com/kf/HTB1GNInmFuWBuNjSszbq6AS7FXaA/231186930/HTB1GNInmFuWBuNjSszbq6AS7FXaA.jpg\" alt=\" Premium 3d fiber silk synthetic false eyelashes\" ori-width=\"750\" ori-height=\"1938\" /></p>\n<p style=\"margin: 0px; padding: 0px; color: #000000; font-family: Arial; font-size: 12px; font-style: normal; font-weight: normal;\"><img src=\"//sc02.alicdn.com/kf/HTB165ZaflmWBuNkSndVq6AsApXaU/231186930/HTB165ZaflmWBuNkSndVq6AsApXaU.jpg\" alt=\"5.jpg\" ori-width=\"750\" ori-height=\"836\" /></p>\n<p style=\"margin: 0px; padding: 0px; color: #000000; font-family: Arial; font-size: 12px; font-style: normal; font-weight: normal;\"><img src=\"//sc02.alicdn.com/kf/HTB1Z349mUR1BeNjy0Fmq6z0wVXaA/231186930/HTB1Z349mUR1BeNjy0Fmq6z0wVXaA.jpg\" alt=\" Premium 3d fiber silk synthetic false eyelashes\" ori-width=\"750\" ori-height=\"659\" /><img src=\"//sc01.alicdn.com/kf/HTB1qwFimFGWBuNjy0Fbq6z4sXXal/231186930/HTB1qwFimFGWBuNjy0Fbq6z4sXXal.jpg\" alt=\" Premium 3d fiber silk synthetic false eyelashes\" ori-width=\"750\" ori-height=\"825\" /><img src=\"//sc01.alicdn.com/kf/HTB16L99nTJYBeNjy1zeq6yhzVXap/231186930/HTB16L99nTJYBeNjy1zeq6yhzVXap.jpg\" alt=\"8.jpg\" ori-width=\"750\" ori-height=\"723\" /><img src=\"//sc02.alicdn.com/kf/HTB1CPL_qoR1BeNjy0Fmq6z0wVXaE/231186930/HTB1CPL_qoR1BeNjy0Fmq6z0wVXaE.jpg\" alt=\"10\" ori-width=\"750\" ori-height=\"592\" /><img src=\"//sc01.alicdn.com/kf/HTB1V2WAgQ9WBuNjSspeq6yz5VXan/231186930/HTB1V2WAgQ9WBuNjSspeq6yz5VXan.jpg\" alt=\"Premium 3d fiber silk synthetic false eyelashes\" ori-width=\"750\" ori-height=\"608\" /><img src=\"//sc01.alicdn.com/kf/HTB1pQuOgQyWBuNjy0Fpq6yssXXag/231186930/HTB1pQuOgQyWBuNjy0Fpq6yssXXag.jpg\" alt=\"Premium 3d fiber silk synthetic false eyelashes\" ori-width=\"750\" ori-height=\"503\" /><img src=\"//sc01.alicdn.com/kf/HTB1of4ppk9WBuNjSspeq6yz5VXan/231186930/HTB1of4ppk9WBuNjSspeq6yz5VXan.jpg\" alt=\"14.jpg\" ori-width=\"750\" ori-height=\"424\" /></p>"
+}

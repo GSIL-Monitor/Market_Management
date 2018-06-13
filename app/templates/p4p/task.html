@@ -1,0 +1,57 @@
+<template id="template_task">
+    <div class="task template_content">
+        <div class="input-group ml-auto mr-auto mb-3">
+
+            <div class="input-group-prepend">
+                <label class="input-group-text">间 隔</label>
+            </div>
+            <input type="text" class="form-control" id="task_interval">
+            <div class="input-group-prepend">
+                <label class="input-group-text">分 钟</label>
+            </div>
+
+            <div class="input-group-prepend">
+                <label class="input-group-text">开 始</label>
+            </div>
+            <input type="text" class="form-control" id="task_start_date">
+            <input type="text" class="form-control" id="task_start_time">
+
+            <div class="input-group-prepend">
+                <label class="input-group-text">结 束</label>
+            </div>
+            <input type="text" class="form-control" id="task_end_date">
+            <input type="text" class="form-control" id="task_end_time">
+            
+            <div class="input-group-prepend">
+                <label class="input-group-text" for="keywords_group">分 组</label>
+            </div>
+            <select class="custom-select" id="keywords_group">
+            </select>
+            <div class="input-group-prepend">
+                <label class="input-group-text" for="task_type">类 型</label>
+            </div>
+            <select class="custom-select" id="task_type">
+                <option value="recording">记 录</option>
+                <option selected value="monitor">监 控</option>
+            </select>
+            <button type="button" class="btn btn-primary add_task">添 加</button>
+        </div>
+        <table class="table table-sm table-striped table-hover ml-auto mr-auto task">
+            <thead class="thead-dark">
+                <tr>
+                    <th scope="col">序 列</th>
+                    <th scope="col">间 隔</th>
+                    <th scope="col">开 始</th>
+                    <th scope="col">结 束</th>
+                    <th scope="col">分 组</th>
+                    <th scope="col">类 型</th>
+                    <th scope="col">下次执行时间</th>
+                    <th scope="col"></th>
+                </tr>
+            </thead>
+            <tbody>
+                
+            </tbody>
+        </table>
+    </div>
+</template>

@@ -1,0 +1,77 @@
+<template id="template_keywords">
+    <div class="keywords template_content">
+        <div class="form-group fetch_keywords">
+            <span class="section_title"><span><h5>爬取关键词</h5></span><span class="crawling_status"></span></span>
+            <hr>
+            <div>
+                <span class="web_sites">
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input ws_ali" type="radio" value="alibaba">
+                        <label class="form-check-label" for="ws_ali">阿里</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input ws_ali_sp" type="radio"  value="alibaba_sp">
+                        <label class="form-check-label" for="ws_ali_sp">阿里(商家)</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input ws_ali_sr" type="radio"  value="alibaba_sr" checked>
+                        <label class="form-check-label" for="ws_ali_sr">阿里(橱窗)</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input ws_amazon" type="radio"  value="amazon">
+                        <label class="form-check-label" for="ws_amazon">Amazon</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input ws_ebay" type="radio"  value="ebay">
+                        <label class="form-check-label" for="ws_ebay">eBay</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input ws_walmart" type="radio"  value="walmart">
+                        <label class="form-check-label" for="ws_walmart">Walmart</label>
+                    </div>
+                </span>
+                <span class="attr_name">关键词: </span>
+                <span><input type="text" class="keywords_searched"></span>
+                <span class="attr_name">页数: </span>
+                <span><input type="text" class="page_quantity" style="width: 20px; text-align: center;" value="1"></span>
+                <button type="button" class="btn btn-sm btn-primary search">爬 取</button>
+            </div>
+        </div>
+        <div class="form-group fetch_results">
+            <span class="section_title"><h5>整理关键词</h5></span>
+            <hr>
+            <div class="card-group">
+                <div class="card result">
+                    <div class="card-header">
+                        <!-- <span>搜索结果:</span> -->
+                        <div class="input-group float-right">
+                            <select class="custom-select crawl_results_selection">
+                                <option class="place_holder" selected>Choose...</option>
+                            </select>
+                            <div class="input-group-append">
+                                <button class="btn btn-primary btn-sm remove_result" type="button">删 除</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group mb-3">
+                        </ul>
+                    </div>
+                </div>
+                <div class="card frequency">
+                    <div class="card-header">
+                        <!-- <span>词 频</span> -->
+                        <div class="btn-group btn-group-sm float-right" role="group" aria-label="Second group">
+                            <button type="button" class="btn btn-secondary title">标 题</button>
+                            <button type="button" class="btn btn-secondary keyword">关键字</button>
+                        </div>
+                    </div>
+                    <div class="card-body"><!-- 
+                        <ul class="list-group mb-3">
+                        </ul> -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>

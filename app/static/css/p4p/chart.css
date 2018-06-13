@@ -1,0 +1,38 @@
+.card-body>.chart{
+	position: absolute;
+    top: 0px;
+    bottom: 0px;
+    width: 100%;
+    overflow-y: hidden;
+}
+.card-body>.chart .items.row{
+	position: absolute;
+    top: 300px;
+    bottom: 0px;
+    width: 100%;
+    overflow-y: hidden;
+}
+.chart div.keywords{
+    width: 35%;
+    overflow-y: scroll;
+}
+.chart div.sponsors{
+    width: 65%;
+    padding-left: 10px;
+    overflow-y: scroll;
+}
+
+.chart tr.selected{
+    background-color: lightgreen !important;
+    color: black;
+    font-weight: bold;
+}
+
+.chart tr.related{
+    background-color: lightblue !important;
+    color: black;
+}
+
+.chart .svg_container{
+    height: 300px;
+}

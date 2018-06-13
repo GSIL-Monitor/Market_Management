@@ -1,0 +1,91 @@
+
+.keywords .fetch_keywords input{
+    border:none;
+    border-bottom: solid 1px black;
+}
+.keywords .fetch_keywords>div{
+    font-size: 14px;
+}
+.keywords .fetch_keywords span.web_sites{
+    display: block;
+}
+.keywords .fetch_keywords input.keywords_searched{
+    width: 314px;
+}
+
+.keywords .fetch_results{
+
+}
+
+.keywords .fetch_results .card{
+    font-size: 14px;
+}
+
+
+.keywords .card-header{
+    padding: 0 5px;
+}
+.keywords .card-header>span{
+    vertical-align: middle;
+}
+.keywords .card-body,
+.keywords .card-body li{
+    padding:0px;
+    cursor:pointer;
+}
+
+.keywords .card.result li span.used{
+    background-color: pink;
+}
+
+.keywords .card.result li span{
+    display: table-cell;
+    vertical-align: middle;
+    font-size: 14px;
+    cursor:pointer;
+}
+.keywords .card.result li .reserved{
+    color: red;
+}
+
+.keywords .card.result select{
+    height: 31px;
+    font-size: 13px;
+}
+
+
+.keywords .card.result li span.badge{
+    position: absolute;
+    left: 1px;
+    bottom: 1px;
+    font-size: 11px;
+}
+
+.keywords .card.result li span div{
+    padding: 0px 5px;
+}
+
+
+.keywords .card.result li span ul{
+    padding: 0px;
+    margin-left: 30px;
+}
+
+
+.keywords .card.result li span ul li{
+    margin-left: 0px;
+}
+
+
+.keywords .card.result li .keyword{
+    font-size: 13px;
+    padding: 0px;
+}
+
+.keywords .card.result li img{
+    width:100px;
+}
+
+.keywords .card.frequency{
+    max-width: 250px;
+}

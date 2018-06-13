@@ -1,0 +1,79 @@
+.card-header .products button{
+    margin:0px !important;
+}
+.card-header .products input.similar_product_id{
+    border:none;
+    border-bottom: solid 1px black;
+    width: 120px;
+    text-align: center;
+}
+.card-header .products input.post_similar_product{
+    margin-top: 9px;
+}
+.card-header .products label{
+    margin-top: 3px;
+}
+.card-body .products{
+    position: absolute;
+    left: 0px;
+    right:0px;
+    top:0px;
+    bottom: 0px;
+}
+.products>.series{
+    min-height: 40px;
+    padding: 5px;
+    background: lightgray;
+    margin: 5px;
+}
+.products>.series .badge{
+    margin:5px;
+    cursor:pointer;
+}
+
+.products>div:nth-child(2){
+    position: absolute;
+    top: 50px;
+    width: 100%;
+    bottom: 0px;
+    overflow: hidden;
+}
+
+.products .product_list{
+    width: 200px;
+    position: absolute;
+    overflow-y: scroll;
+    top: 0px;
+    bottom: 0px;
+}
+.products .product_list .card{
+    width:100px;
+    display: inline-block;
+}
+.products .product_list .card.posted .card-footer{
+    background-color: lightgreen;
+}
+.products .product_list .card.new_posted .card-footer{
+    background-color: lightblue;
+}
+.products .product_list .card.selected{
+    border: solid 1px blue;
+}
+.products .product_list .card-footer{
+    padding: 0px 10px;
+    text-align: center;
+}
+
+.products .settings{
+    position: absolute;
+    left:200px;
+    right:0px;
+    height: 100%;
+}
+
+.products .tabs>.card-body{
+    position: absolute;
+    top: 50px;
+    bottom: 0px;
+    overflow-y: scroll;
+}

@@ -1,0 +1,13 @@
+.markets table {
+    width: 900px;
+}
+.markets tbody tr.selected{
+    background-color: lightgray !important;
+}
+
+.markets tbody td:first-child{
+    width: 180px;
+}
+.markets tbody td:nth-child(3){
+    width: 100px;
+}

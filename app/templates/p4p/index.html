@@ -1,0 +1,20 @@
+{% extends "framework/layout.html" %}
+{% block html_head %}
+    <link rel=stylesheet type=text/css href="{{ url_for('static', filename='css/p4p/keywords.css') }}">
+    <link rel=stylesheet type=text/css href="{{ url_for('static', filename='css/p4p/task.css') }}">
+    <link rel=stylesheet type=text/css href="{{ url_for('static', filename='css/p4p/chart.css') }}">
+    <link rel=stylesheet type=text/css href="{{ url_for('static', filename='libs/date_time_picker/bootstrap-material-datetimepicker.css') }}">
+
+{% endblock html_head %}
+
+{% block body_bottom %}
+
+    {% include 'p4p/keywords.html' %}
+    {% include 'p4p/task.html' %}
+    {% include 'p4p/chart.html' %}
+
+    <script type="text/javascript" src="{{ url_for('static', filename='libs/d3/d3.js') }}" crossorigin="anonymous"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='libs/date_time_picker/bootstrap-material-datetimepicker.js') }}" crossorigin="anonymous"></script>
+    
+    <script type="module" src="{{ url_for('static', filename='js/p4p/index.js') }}"></script>
+{% endblock body_bottom %}

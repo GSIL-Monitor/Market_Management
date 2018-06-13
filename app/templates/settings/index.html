@@ -1,0 +1,11 @@
+{% extends "framework/layout.html" %}
+{% block html_head %}
+    <link rel=stylesheet type=text/css href="{{ url_for('static', filename='css/settings/markets.css') }}"> 
+{% endblock html_head %}
+
+{% block body_bottom %}
+
+    {% include 'settings/markets.html' %}
+
+    <script type="module" src="{{ url_for('static', filename='js/settings/index.js') }}"></script>
+{% endblock body_bottom %}

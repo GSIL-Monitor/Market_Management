@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <title>产品管理</title>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.png') }}">
+    <link rel=stylesheet type=text/css href="{{ url_for('static', filename='libs/bootstrap/bootstrap.min.css') }}" crossorigin="anonymous">
+    <link rel=stylesheet type=text/css href="{{ url_for('static', filename='css/framework/layout.css') }}">
+
+    {% block html_head %}{% endblock html_head %}
+  </head>
+  <body>
+
+    <div id="top" class="frame">
+      {% include 'framework/top.html' %}
+    </div>
+
+    <div class="frame row no-gutters">
+      <div id="left" class="frame">
+        {% include 'framework/left.html' %}
+        {% block left %}{% endblock left %}
+      </div>
+      <div id="main" class="col frame">
+        <div class="main_content">
+        </div>
+        <div class="notify">
+        </div>
+      </div>
+      <div id="right" class="frame">
+        {% include 'framework/right.html' %}
+      </div>
+    </div>
+
+    <!-- start to load html templates -->
+    {% include 'framework/tabs.html' %}
+
+    <script type="text/javascript" src="{{ url_for('static', filename='libs/moment-with-locales.min.js') }}" crossorigin="anonymous"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='libs/socketio/socket.io-2.1.0.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='libs/jquery/jquery-3.3.1.min.js') }}" crossorigin="anonymous"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='libs/bootstrap/popper.min.js') }}" crossorigin="anonymous"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='libs/bootstrap/bootstrap.min.js') }}" crossorigin="anonymous"></script>
+
+    <script type="text/javascript" src="{{ url_for('static', filename='js/framework/framework.js') }}" crossorigin="anonymous"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='js/framework/top.js') }}" crossorigin="anonymous"></script>
+
+    {% block body_bottom %}{% endblock body_bottom %}
+
+  </body>
+</html>

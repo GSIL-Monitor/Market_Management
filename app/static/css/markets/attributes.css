@@ -1,0 +1,92 @@
+div.attributes{
+}
+
+div.attributes input.duplicated {
+    background-color: pink;
+}
+
+div.attributes input.add_tra_inf,
+div.attributes input.product_name,
+div.attributes input.alibaba_category,
+div.attributes input.delivery_time,
+div.attributes input.add_del_inf{
+    width: 592px !important;
+}
+div.attributes li.keywords input{
+    width: 188px;
+}
+div.attributes>div{
+    margin-top:1rem;
+    margin-bottom: 1.5rem;
+}
+div.attributes ul{
+    margin-top:15px;
+    margin-bottom: 15px;
+    font-size: 14px;
+}
+
+div.attributes input[type="text"]{
+    margin-right:10px;
+    border: none;
+    border-bottom: solid 1px gray;
+    width: 260px;
+}
+
+div.attributes .list-group li{
+    border:none;
+    padding: 3px 5px;
+}
+
+div.attributes hr{
+    margin: 0px;
+    border-color: lightgrey;
+    size: 2px;
+}
+
+div.attributes span.attr_name{
+    display: inline-block;
+    width:110px;
+    color: black;
+    text-align: right;
+    padding-left: 10px;
+    padding-right:10px;
+}
+div.attributes span#name{
+    display: inline-block;
+    width:130px;
+}
+div.attributes span#folder{
+    display: inline-block;
+    width:460px;
+}
+div.attributes #product_category{
+    width:400px;
+}
+div.attributes #keyword_1,
+div.attributes #keyword_2,
+div.attributes #keyword_3{
+    width:180px;
+}
+div.attributes input.port,
+div.attributes .supply_ability input{
+    width: 178px;
+}
+div.attributes button.attrs_save{
+    position: relative;
+    left: 612px;
+}
+div.attributes input.product_category{
+    width:315px;
+}
+div.attributes textarea.packaging{
+    margin-left: 0px;
+/*    position: absolute;
+    left: 0px;
+    top: 5px;*/
+    width: 592px;
+    height: 100px;
+}
+div.attributes input:disabled{
+    background-color: white;
+    color: gray;
+}
