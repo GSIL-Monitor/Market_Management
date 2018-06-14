@@ -22,9 +22,9 @@ function init(data){
 
     $root.on('click', '.card.market', function(e){
         if($(this).data('market')){
-            return
+            $(this).removeData('market')
         }
-        $(this).addClass('selected').siblings('.selected').removeClass('selected')
+        $(this).addClass('selected')
 
         load_categories($(this))
 
@@ -160,7 +160,6 @@ function load_categories($card){
     }
 
     let market = current_market()
-    
     socket.emit('get_categories', {'name': market.name, 'directory': market.directory}, function(data){
         let categories = data['categories']
         let sub_categories = data['sub_categories']
