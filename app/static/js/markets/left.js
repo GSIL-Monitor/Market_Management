@@ -5,6 +5,7 @@ import {Tab_keywords} from './tab_keywords.js'
 import {Tab_market_others} from './tab_market_others.js'
 import {Tab_pictures} from './tab_pictures.js'
 import {Tab_products} from './tab_products.js'
+import {Tab_update} from './tab_update.js'
 
 let $container = undefined
 let socket = undefined
