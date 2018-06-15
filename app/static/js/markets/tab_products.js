@@ -286,6 +286,7 @@ function Tab_products(socket, market, categories=undefined, directory=undefined,
                                     p['similar_ali_id'] = ali_id
                                     found = true
                                 }
+
                             }
                         }
                         if(!found){
