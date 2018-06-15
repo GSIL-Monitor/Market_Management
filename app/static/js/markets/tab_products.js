@@ -272,7 +272,6 @@ function Tab_products(socket, market, categories=undefined, directory=undefined,
 
             }
 
-// console.log(kws.join('\r\n'))
             if(similar_product_selected){
                 if(!similar_product_id){
                     for(let p of data){
