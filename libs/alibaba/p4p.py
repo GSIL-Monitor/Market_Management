@@ -6,7 +6,6 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import WebDriverException
-from selenium.common.exceptions import TimeoutException
 from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import ElementNotVisibleException
 from selenium.common.exceptions import StaleElementReferenceException
@@ -17,8 +16,6 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 from pyquery import PyQuery as pq
 
-import arrow
-import imp
 import time
 import re
 

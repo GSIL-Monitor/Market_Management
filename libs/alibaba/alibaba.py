@@ -1,6 +1,5 @@
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -15,104 +14,106 @@ import time
 import re
 
 
-class Alibaba(object):
+class Alibaba:
         
     api = 'https://i.alibaba.com'
     api_post_similar_product = 'https://hz-productposting.alibaba.com/product/post_product_interface.htm?from=manage&import_product_id='
     api_product_manage = 'https://hz-productposting.alibaba.com/product/products_manage.htm'
 
-    @classmethod
-    def login(cls, user, password, browser, socketio=None, namespace=None, room=None):
+    chrome_options = webdriver.ChromeOptions()
+    # chrome_options_headless.add_argument('--headless')
+    chrome_options.add_argument('--disable-gpu')
+    chrome_options.add_argument('--disable-extensions')
+    chrome_options.add_argument('--disable-logging')
+    chrome_options.add_argument('--ignore-certificate-errors')
 
-        a_signout = browser.find_elements_by_css_selector('header a[data-val="ma_signout"]')
-        span_wel = browser.find_elements_by_css_selector('header div[data-role="user"] div[data-role="wel"] a span')
+    def __init__(self, user, password, socketio=None, namespace=None, room=None):
+        self.user = user
+        self.password = password
+        self.socketio = socketio
+        self.namespace = namespace
+        self.room = room
+        self.browser = webdriver.Chrome(chrome_options=self.chrome_options)
+
+    def notify(self, typo, message):
+        if self.socketio:
+            self.socketio.emit('notify',  dict(type=typo, content=message), namespace=self.namespace, room=self.room)
+        else:
+            print(type, message)
+
+    def login(self):
+        a_signout = self.browser.find_elements_by_css_selector('header a[data-val="ma_signout"]')
+        span_wel = self.browser.find_elements_by_css_selector('header div[data-role="user"] div[data-role="wel"] a span')
         if len(span_wel) != 0 or len(a_signout) != 0:
             if len(span_wel) != 0:
-                msg = '已经登录为: '+span_wel[0].get_attribute('innerHTML')
+                self.notify("warning", "已经登录为: " + span_wel[0].get_attribute('innerHTML'))
             if len(a_signout) != 0:
-                ln = browser.find_elements_by_css_selector('header div.sc-hd-ms-name')
+                ln = self.browser.find_elements_by_css_selector('header div.sc-hd-ms-name')
                 ln = ln[0].get_attribute('innerHTML')
-                msg = '已经登录为: '+re.sub('Hi +', '', ln)
-            socketio.emit('notify', {'type':'warning', 'content':msg}, namespace=namespace, room=room)
+                self.notify("warning", "已经登录为: " + re.sub('Hi +', '', ln))
             return
 
         try:
-            if cls.api not in browser.current_url:
-                msg = '打开网址：'+cls.api
-                socketio.emit('notify', {'type':'primary', 'content':msg}, namespace=namespace, room=room)
-                browser.get(cls.api)
-                pan_wel = browser.find_elements_by_css_selector('header div[data-role="user"] div[data-role="wel"] a span')
+            if self.api not in self.browser.current_url:
+                self.notify("primary", "打开网址：" + self.api)
+                self.browser.get(self.api)
+                pan_wel = self.browser.find_elements_by_css_selector('header div[data-role="user"] div[data-role="wel"] a span')
                 if len(span_wel) != 0:
-                    msg = '已经登录为: '+span_wel.get_attribute('innerHTML')
-                    socketio.emit('notify', {'type':'warning', 'content':msg}, namespace=namespace, room=room)
+                    self.notify( 'warning', "已经登录为: " + span_wel.get_attribute('innerHTML'))
                     return
 
-        except (WebDriverException, ConnectionAbortedError, AttributeError) as E:
-            # msg = '打开浏览器 ... ...'
-            # socketio.emit('notify', {'type':'primary', 'content':msg}, namespace=namespace, room=room)
-            # chrome_options_headless = current_app.data.chrome_options_headless
-            # browser = webdriver.Chrome(chrome_options=chrome_options_headless)
-
-            msg = '打开网址：'+cls.api
-            socketio.emit('notify', {'type':'primary', 'content':msg}, namespace=namespace, room=room)
-            browser.get(cls.api)
+        except (WebDriverException, ConnectionAbortedError, AttributeError):
+            self.notify("primary", "打开网址：" + self.api)
+            self.browser.get(self.api)
 
         try:
-            msg = '等待登陆页面加载 ... ...'
-            socketio.emit('notify', {'type':'primary', 'content':msg}, namespace=namespace, room=room)
-            WebDriverWait(browser, 15).until(EC.presence_of_element_located((By.CSS_SELECTOR, "#alibaba-login-iframe iframe")))
+            self.notify("primary", "等待登陆页面加载 ... ...")
+            WebDriverWait(self.browser, 15).until(EC.presence_of_element_located((By.CSS_SELECTOR, "#alibaba-login-iframe iframe")))
             time.sleep(1)
 
-            windows = browser.window_handles
-            win = browser.current_window_handle
+            windows = self.browser.window_handles
+            win = self.browser.current_window_handle
             for window in windows:
                 if window != win:
-                    browser.switch_to.window(window)
-                    browser.close()
-            browser.switch_to.window(win)
+                    self.browser.switch_to.window(window)
+                    self.browser.close()
+            self.browser.switch_to.window(win)
 
-            iframe = browser.find_element_by_css_selector('#alibaba-login-iframe iframe')
-            browser.switch_to.frame(iframe)
+            iframe = self.browser.find_element_by_css_selector('#alibaba-login-iframe iframe')
+            self.browser.switch_to.frame(iframe)
 
-            msg = '输入登录信息， 并登录'
-            socketio.emit('notify', {'type':'primary', 'content':msg}, namespace=namespace, room=room)
-            input_login = browser.find_element_by_css_selector('input#fm-login-id')
-            input_pwd = browser.find_element_by_css_selector('input#fm-login-password')
-            input_submit = browser.find_element_by_css_selector('input#fm-login-submit')
+            self.notify("primary", "输入登录信息， 并登录")
+            input_login = self.browser.find_element_by_css_selector('input#fm-login-id')
+            input_pwd = self.browser.find_element_by_css_selector('input#fm-login-password')
+            input_submit = self.browser.find_element_by_css_selector('input#fm-login-submit')
             input_login.clear()
             input_pwd.clear()
-            input_login.send_keys(user)
-            input_pwd.send_keys(password)
+            input_login.send_keys(self.user)
+            input_pwd.send_keys(self.password)
             input_submit.click()
 
-            WebDriverWait(browser, 15).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'header div[data-role="user"]')))
-            if len(browser.find_elements_by_css_selector('header div[data-role="user"]')):
-                span = browser.find_element_by_css_selector('header div[data-role="user"] div[data-role="wel"] a span')
+            WebDriverWait(self.browser, 15).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'header div[data-role="user"]')))
+            if len(self.browser.find_elements_by_css_selector('header div[data-role="user"]')):
+                span = self.browser.find_element_by_css_selector('header div[data-role="user"] div[data-role="wel"] a span')
                 user_name = span.get_attribute('innerHTML')
-                msg = '成功 登录 阿里巴巴 国际站！用户名：'+user_name
-                socketio.emit('notify', {'type':'success', 'content':msg}, namespace=namespace, room=room)
+                self.notify("success", "成功 登录 阿里巴巴 国际站！用户名：" + user_name)
         except TimeoutException:
-                msg = '登录 阿里巴巴 国际站 失败！原因超时'
-                socketio.emit('notify', {'type':'danger', 'content':msg}, namespace=namespace, room=room)
+                self.notify("danger", "登录 阿里巴巴 国际站 失败！原因超时")
 
-
-    @classmethod
-    def crawl_product_data(cls, result_message, ali_id, browser, socketio=None, namespace=None, room=None):
+    def crawl_product_data(self, result_message, ali_id):
         api = 'https://hz-productposting.alibaba.com/product/editing.htm?id='
+        browser = self.browser
         if not browser:
-            msg = '没有登录，请先登录'
-            socketio.emit('notify', {'type':'danger', 'content':msg}, namespace=namespace, room=room)
+            self.notify("danger", "没有登录，请先登录")
             return
         attrs = {'alibaba_id': ali_id}
         template = {}
         try:
-            msg = '打开产品 [' + ali_id + '] 编辑页面 ... ...'
-            socketio.emit('notify', {'type':'primary', 'content':msg}, namespace=namespace, room=room)
+            self.notify("primary", "打开产品 [" + ali_id + "] 编辑页面 ... ...")
             browser.get(api+ali_id)
             WebDriverWait(browser, 30).until(EC.visibility_of_element_located((By.CSS_SELECTOR, '#editor-container')))
-            
-            msg = '开始爬取产品 [' + ali_id + '] 数据 ... ...'
-            socketio.emit('notify', {'type':'primary', 'content':msg}, namespace=namespace, room=room)
+
+            self.notify("primary", "开始爬取产品 [" + ali_id + "] 数据 ... ...")
             attrs['alibaba_category'] = browser.find_element_by_css_selector('span#cate-path-text-copy').text.strip()
             attrs['name'] = browser.find_element_by_css_selector('input#productName').get_attribute('value').strip()
             keywords = []
@@ -160,7 +161,7 @@ class Alibaba(object):
             css_selector = '#tradInfoblock>div:nth-child(3) .price-scroll-selector input[value="uniform"]'
             element = browser.find_element_by_css_selector(css_selector)
             attrs['isTieredPricing'] = element.is_selected()
-            if(attrs['isTieredPricing']):
+            if attrs['isTieredPricing']:
                 attrs['sales_unit'] = browser.find_element_by_css_selector('#tradeInfoQuantityUnit').text.strip()
                 attrs['currency'] = 'USD'
                 tieredPricing = []
@@ -184,7 +185,7 @@ class Alibaba(object):
             for cb in checkboxes:
                 value = cb.get_attribute('value')
                 checked = cb.is_selected()
-                if(value=='Others'):
+                if value == "Others":
                     continue
                 payment_methods[value] = checked
             attrs['payment_methods'] = payment_methods
@@ -202,62 +203,55 @@ class Alibaba(object):
             attrs['supply_ability'] = supply_ability
             attrs['additional_delivery_information'] = browser.find_element_by_css_selector('#supplyOther').get_attribute('value')
             attrs['packaging'] = browser.find_element_by_css_selector('#packagingDesc').get_attribute('value')
-            
-            msg = '完成 对产品 [' + ali_id + '] 编辑页面 的数据爬取！'
-            socketio.emit('notify', {'type':'success', 'content':msg}, namespace=namespace, room=room)
+
+            self.notify('success', "完成 对产品 [" + ali_id + "] 编辑页面 的数据爬取！")
         except TimeoutException as e:
             attrs = None
             template = None
-            msg = '爬取产品 [' + ali_id + '] 数据 出错，超时，' + str(e)
+            msg = "爬取产品 [" + ali_id + '] 数据 出错，超时，' + str(e)
         except NoSuchElementException as e:
             attrs = None
             template = None
-            msg = '爬取产品 [' + ali_id + '] 数据 出错，没找到目标元素, ' + str(e)
+            msg = "爬取产品 [" + ali_id + "] 数据 出错，没找到目标元素, " + str(e)
         except Exception as e:
             attrs = None
             template = None
-            msg = '爬取产品 [' + ali_id + '] 数据 出错, ' + str(e)
+            msg = "爬取产品 [" + ali_id + "] 数据 出错, " + str(e)
         finally:
             browser.get('https://i.alibaba.com')
 
         if not attrs or not template:
-            socketio.emit('notify', {'type':'danger', 'content':msg}, namespace=namespace, room=room)
-            socketio.emit(result_message, None, namespace=namespace, room=room)
+            self.notify("danger", msg)
+            if self.socketio:
+                self.socketio.emit(result_message, None)
         else:
             result = {'attributes': attrs, 'template': template}
-            socketio.emit(result_message, result, namespace=namespace, room=room)
+            if self.socketio:
+                self.socketio.emit(result_message, result)
 
-
-    @classmethod
-    def change_product_price(cls, ali_id, price_range, browser, socketio, namespace, room):
-        print(ali_id, price_range, browser)
+    def change_product_price(self, ali_id, price_range):
+        browser = self.browser
         api = 'https://hz-productposting.alibaba.com/product/editing.htm?id='
         if not browser:
-            msg = '没有登录，请先登录'
-            socketio.emit('notify', {'type':'danger', 'content':msg}, namespace=namespace, room=room)
+            self.notify( 'danger', "没有登录，请先登录")
             return
 
         attrs = {'alibaba_id': ali_id}
         template = {}
         try:
-            msg = '打开产品 [' + ali_id + '] 编辑页面 ... ...'
-            socketio.emit('notify', {'type':'primary', 'content':msg}, namespace=namespace, room=room)
+            self.notify("primary", "打开产品 [" + ali_id + "] 编辑页面 ... ...")
             browser.get(api+ali_id)
             WebDriverWait(browser, 30).until(EC.visibility_of_element_located((By.CSS_SELECTOR, '#editor-container')))
 
-            msg = '设置产品 [' + ali_id + '] 的价格区间 ... ...'
-            socketio.emit('notify', {'type':'primary', 'content':msg}, namespace=namespace, room=room)
+            self.notify("primary", "设置产品 [" + ali_id + "] 的价格区间 ... ...")
             js_templ = "document.querySelector('{selector}').value = '{value}';"
             js = js_templ.format(selector='#priceRangeMin', value=price_range[0])
             browser.execute_script(js)
             js = js_templ.format(selector='#priceRangeMax', value=price_range[1])
             browser.execute_script(js)
 
-
             # submit to next step
-            msg = {'type': 'primary'}
-            msg['content'] = '提交产品修改'
-            socketio.emit('notify', msg, namespace=namespace, room=room)
+            self.notify("primary", '提交产品修改')
             btn_submit_next = browser.find_element_by_css_selector('button#submitFormNext')
             ActionChains(browser).move_to_element(btn_submit_next).perform()
             btn_submit_next.click()
@@ -266,9 +260,7 @@ class Alibaba(object):
             btn_submit = WebDriverWait(browser, 15).until(EC.element_to_be_clickable((By.CSS_SELECTOR, 'button#submitFormBtnA')))
             btn_submit.click()
 
-            msg = {'type': 'primary'}
-            msg['content'] = '成功 提交 修改, ' + ali_id
-            socketio.emit('notify', msg, namespace=namespace, room=room)
+            self.notify("primary", '成功 提交 修改, ' + ali_id)
         except TimeoutException as e:
             attrs = None
             template = None
@@ -284,32 +276,24 @@ class Alibaba(object):
         finally:
             pass
 
-
-    @classmethod
-    def post_similar_product(cls, product, similar_ali_pid, browser, socketio=None, namespace=None, room=None):
-
+    def post_similar_product(self, product, similar_ali_pid):
+        browser = self.browser
         js_templ = "document.querySelector('{selector}').value = '{value}';"
         attrs = product['attributes']
 
         try:
-            msg = {'type': 'primary'}
-            msg['content'] = '打开 发布相似产品 网址: ' + cls.api_post_similar_product + similar_ali_pid
-            socketio.emit('notify', msg, namespace=namespace, room=room)
+            self.notify("primary", "打开 发布相似产品 网址: " + self.api_post_similar_product + similar_ali_pid)
 
-            browser.get(cls.api_post_similar_product + similar_ali_pid)
+            browser.get(self.api_post_similar_product + similar_ali_pid)
 
             css_selector = 'header div[data-role="user"] div[data-role="wel"] a span'
             if len(browser.find_elements_by_css_selector(css_selector)) == 0:
-                msg = {'type': 'warning'}
-                msg['content'] = '请先登录 阿里巴巴 国际站'
-                socketio.emit('notify', msg, namespace=namespace, room=room)
+                self.notify("warning", "请先登录 阿里巴巴 国际站")
                 return
 
             WebDriverWait(browser, 15).until(EC.visibility_of_element_located((By.CSS_SELECTOR, '#editor-container')))
 
-            msg = {'type': 'primary'}
-            msg['content'] = '修改标题和关键字 ... ...'
-            socketio.emit('notify', msg, namespace=namespace, room=room)
+            self.notify("primary", "修改标题和关键字 ... ...")
 
             js = js_templ.format(selector='#productName', value=html.escape(attrs['name']))
             browser.execute_script(js)
@@ -329,21 +313,17 @@ class Alibaba(object):
             has_selector = 'image-upload-list-item-done'
             counter = 1
             for file in product['pictures']:
-                msg = {'type': 'primary'}
-                msg['content'] = '上传产品图片: 第 '+ str(counter) +' 张, ' + file.split('\\').pop()
-                socketio.emit('notify', msg, namespace=namespace, room=room)
+                self.notify("primary", "上传产品图片: 第 " + str(counter) + " 张, " + file.split('\\').pop())
                 input_file_list = browser.find_element_by_css_selector('#iamge-info-block input[type="file"]')
                 input_file_list.send_keys(file)
-                WebDriverWait(browser, 15).until(element_has_css_class((By.CSS_SELECTOR, css_selector), has_selector))
+                WebDriverWait(browser, 15).until(ElementHasCssClass((By.CSS_SELECTOR, css_selector), has_selector))
                 counter += 1
 
             if len(product['template']['selections']) != 0:
                 # 开始 产品详情 设置
                 element = browser.find_element_by_css_selector("#editor-container")
                 ActionChains(browser).move_to_element(element).perform()
-                msg = {'type': 'primary'}
-                msg['content'] = '开始 设置 产品详情页 ... ...'
-                socketio.emit('notify', msg, namespace=namespace, room=room)
+                self.notify("primary", "开始 设置 产品详情页 ... ...")
                 # 点击 详情编辑器 ‘源代码’ 按钮， 清空内容，再切换回 富文本 编辑状态
                 browser.find_element_by_css_selector('#mceu_0 button').click()
                 WebDriverWait(browser, 5).until(EC.visibility_of_element_located((By.CSS_SELECTOR, '#mceu_46 textarea')))
@@ -351,12 +331,10 @@ class Alibaba(object):
                 browser.find_element_by_css_selector('#mceu_0 button').click()
                 WebDriverWait(browser, 5).until(EC.visibility_of_element_located((By.CSS_SELECTOR, '#mceu_46 iframe')))
                 css_selector = '#react-tinymce-0-ali-foot-img'
-                WebDriverWait(browser, 15).until(element_text_equals((By.CSS_SELECTOR, css_selector), '15'))
+                WebDriverWait(browser, 15).until(ElementTextEquals((By.CSS_SELECTOR, css_selector), '15'))
 
                 # 点击 ‘从我的电脑选择图片’
-                msg = {'type': 'primary'}
-                msg['content'] = '开始 上传 产品详情页 图片 ... ...'
-                socketio.emit('notify', msg, namespace=namespace, room=room)
+                self.notify("primary", "开始 上传 产品详情页 图片 ... ...")
                 button_pic_upload = browser.find_element_by_css_selector('#mceu_25 button')
                 button_pic_upload.click()
                 time.sleep(0.5)
@@ -370,9 +348,7 @@ class Alibaba(object):
                 has_selector = 'next-upload-list-item-done'
                 counter = 0
                 for file in product['template_pictures']:
-                    msg = {'type': 'primary'}
-                    msg['content'] = '上传 产品详情页 图片: 第 '+ str(counter) +' 张, ' + file.split('\\').pop()
-                    socketio.emit('notify', msg, namespace=namespace, room=room)
+                    self.notify("primary", "上传 产品详情页 图片: 第 " + str(counter) + ' 张, ' + file.split('\\').pop())
 
                     WebDriverWait(browser, 15).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#container input[type="file"]')))
                     input_file = browser.find_element_by_css_selector('#container input[type="file"]')
@@ -386,12 +362,10 @@ class Alibaba(object):
                 browser.switch_to.default_content()
                 text = str(15 - counter)
                 css_selector = '#react-tinymce-0-ali-foot-img'
-                WebDriverWait(browser, 15).until(element_text_equals((By.CSS_SELECTOR, css_selector), text))
+                WebDriverWait(browser, 15).until(ElementTextEquals((By.CSS_SELECTOR, css_selector), text))
 
                 # 获取上传图片的 阿里站 链接
-                msg = {'type': 'primary'}
-                msg['content'] = '获取上传图片的 阿里站链接, 并修改模板'
-                socketio.emit('notify', msg, namespace=namespace, room=room)
+                self.notify("primary", "获取上传图片的 阿里站链接, 并修改模板")
                 btn_source = WebDriverWait(browser, 5).until(EC.element_to_be_clickable((By.CSS_SELECTOR, '#mceu_0 button')))
                 btn_source.click()
                 WebDriverWait(browser, 5).until(EC.visibility_of_element_located((By.CSS_SELECTOR, '#mceu_46 textarea')))
@@ -412,7 +386,7 @@ class Alibaba(object):
                         if len(span) == 1:
                             span[0].string = attrs['name']
                         else:
-                            msg = '再template中没有找到CSS选择器 '+sel['selector']+ ' 所对应的元素'
+                            msg = "再template中没有找到CSS选择器 " + sel['selector'] + " 所对应的元素"
                             raise NoSuchElementException(msg)
                     elif sel['type'] == 'tag_img':
                         img = templ_soup.select(sel['selector'])
@@ -421,23 +395,19 @@ class Alibaba(object):
                             img[0]['src'] = templ_imgs[pic_index]['src']
                             pic_index += 1
                         else:
-                            msg = '再template中没有找到CSS选择器 '+sel['selector']+ ' 所对应的元素'
+                            msg = '再template中没有找到CSS选择器 '+sel['selector'] + ' 所对应的元素'
                             raise NoSuchElementException(msg)
                 html_string = str(templ_soup)
 
                 # 修改后的模板输入 textarea
-                msg = {'type': 'primary'}
-                msg['content'] = '修改后的模板输入, 注入到详情页中'
-                socketio.emit('notify', msg, namespace=namespace, room=room)
+                self.notify("primary", "修改后的模板输入, 注入到详情页中")
                 js = js_templ.format(selector='#mceu_46 textarea', value=re.sub('\n', '\\\\n', html_string))
                 browser.execute_script(js)
                 browser.find_element_by_css_selector('#mceu_0 button').click()
                 WebDriverWait(browser, 5).until(EC.visibility_of_element_located((By.CSS_SELECTOR, '#mceu_46 iframe')))
 
             # check free sample
-            msg = {'type': 'primary'}
-            msg['content'] = '点选免费样品, 保护产品图片'
-            socketio.emit('notify', msg, namespace=namespace, room=room)
+            self.notify("primary", "点选免费样品, 保护产品图片")
             btn_free_sample = browser.find_element_by_css_selector('#rbtnFreeSample')
             ActionChains(browser).move_to_element(btn_free_sample).perform()
             btn_free_sample.click()
@@ -445,7 +415,7 @@ class Alibaba(object):
             # make product pictures to be protected
             quantity = 6
             css_selector = "#iamge-info-block li.image-upload-list-item .action-wrapper"
-            WebDriverWait(browser, 15).until(element_quantity_equals((By.CSS_SELECTOR, css_selector), quantity))
+            WebDriverWait(browser, 15).until(ElementQuantityEquals((By.CSS_SELECTOR, css_selector), quantity))
             css_selector = "#iamge-info-block li.image-upload-list-item .action-wrapper a"
             while True:
                 elements = browser.find_elements_by_css_selector(css_selector)
@@ -468,9 +438,7 @@ class Alibaba(object):
             btn_submit_next.click()
 
             # 提交表格
-            msg = {'type': 'primary'}
-            msg['content'] = '提交产品'
-            socketio.emit('notify', msg, namespace=namespace, room=room)
+            self.notify("primary", "提交产品")
             btn_submit = WebDriverWait(browser, 15).until(EC.element_to_be_clickable((By.CSS_SELECTOR, 'button#submitFormBtnA')))
             btn_submit.click()
 
@@ -480,41 +448,31 @@ class Alibaba(object):
                 words = ''
                 for td in browser.find_elements_by_css_selector('.ui2-dialog-transition tr:not(:first-child) td:nth-child(2)'):
                     words = words + ' ' + td.text
-                msg = {'type': 'danger'}
-                msg['content'] = '出现 违规词 [ ' + words + ' ], 请手动确认，否则 30 秒后 提交 失败'
-                socketio.emit('notify', msg, namespace=namespace, room=room)
+                self.notify("danger", "出现 违规词 [ " + words + " ], 请手动确认，否则 30 秒后 提交 失败")
                 WebDriverWait(browser, 30).until(EC.presence_of_element_located((By.CSS_SELECTOR, '.next-step-item-last.next-step-item-process')))
 
-            msg = {'type': 'primary'}
-            msg['content'] = '成功发布, ' + product['pid']
-            socketio.emit('notify', msg, namespace=namespace, room=room)
+            self.notify("primary", "成功发布, " + product['pid'])
 
             return product
 
         except TimeoutException:
-            msg = {'type': 'danger'}
-            msg['content'] = '错误：' + str(TimeoutException)
-            socketio.emit('notify', msg, namespace=namespace, room=room)
+            self.notify("danger", "错误：" + str(TimeoutException))
             return TimeoutException
         except NoSuchElementException:
-            msg = {'type': 'danger'}
-            msg['content'] = '错误：' + str(NoSuchElementException)
-            socketio.emit('notify', msg, namespace=namespace, room=room)
+            self.notify("danger", "错误：" + str(NoSuchElementException))
             return NoSuchElementException
 
-    @classmethod
-    def get_posted_product_info(cls, pn, browser, socketio=None, namespace=None, room=None):
-
+    def get_posted_product_info(self, pn):
+        browser = self.browser
         products = []
         try:
-            msg = '打开 产品管理 页面 ... ...'
-            socketio.emit('notify', {'type':'primary', 'content':msg}, namespace=namespace, room=room)
-            browser.get(cls.api_product_manage)
+            self.notify("primary", '打开 产品管理 页面 ... ...')
+            browser.get(self.api_product_manage)
             css_selector = '#ballon-container .list-item'
             WebDriverWait(browser, 15).until(EC.presence_of_element_located((By.CSS_SELECTOR, css_selector)))
 
             msg = '切换 至 显示全部产品 ... ...'
-            socketio.emit('notify', {'type':'primary', 'content':msg}, namespace=namespace, room=room)
+            self.notify("primary", msg)
             css_selector = '#ballon-container div[role="tab"]:nth-child(1)'
             tab_all = WebDriverWait(browser, 15).until(EC.visibility_of_element_located((By.CSS_SELECTOR, css_selector)))
             tab_all.click()
@@ -527,7 +485,7 @@ class Alibaba(object):
             pn = int(pn)
             for counter in range(pn):
                 msg = '查找 全部产品列表 第 '+str(counter+1)+' 页'
-                socketio.emit('notify', {'type':'primary', 'content':msg}, namespace=namespace, room=room)
+                self.notify("primary", msg)
 
                 css_selector = '#ballon-container .list-item'
                 items = browser.find_elements_by_css_selector(css_selector)
@@ -565,23 +523,23 @@ class Alibaba(object):
                 else:
                     break
 
-                msg = '完成 查找！'
-                socketio.emit('notify', {'type':'primary', 'content':msg}, namespace=namespace, room=room)
+                self.notify("primary", "完成 查找！")
         except Exception as e:
-            msg = '爬取产品 [' + ali_id + '] 数据 出错, ' + str(e)
-            socketio.emit('notify', {'type':'danger', 'content':msg}, namespace=namespace, room=room)
+            self.notify("danger", "爬取产品 [" + ali_id + "] 数据 出错, " + str(e))
             products = None
         finally:
-            socketio.emit('get_posted_product_info_result', products, namespace=namespace, room=room)
+            if self.socketio:
+                self.socketio.emit("get_posted_product_info_result", products)
 
-class element_has_css_class(object):
+
+class ElementHasCssClass:
     def __init__(self, locator, css_class):
         self.locator = locator
         self.css_class = css_class
 
     def __call__(self, driver):
+        not_found = True
         try:
-            not_found = True
             elements = driver.find_elements(*self.locator)   # Finding the referenced element
             for element in elements:
                 if self.css_class in element.get_attribute("class"):
@@ -589,24 +547,26 @@ class element_has_css_class(object):
                 else:
                     not_found = False
                     break
-        except StaleElementReferenceException as e:
+        except StaleElementReferenceException:
             not_found = True
         finally:
             return not_found
 
-class element_text_equals(object):
+
+class ElementTextEquals:
     def __init__(self, locator, text):
         self.locator = locator
         self.text = text
         
     def __call__(self, driver):
         element = driver.find_element(*self.locator)   # Finding the referenced element
-        if self.text ==  element.text:
+        if self.text == element.text:
             return True
         else:
             return False
 
-class element_quantity_equals(object):
+
+class ElementQuantityEquals:
     def __init__(self, locator, quantity):
         self.locator = locator
         self.quantity = quantity
