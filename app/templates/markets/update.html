@@ -1,4 +1,60 @@
 <template id="template_update">
     <div class="update template_content">
+        <div class="form-group update_content">
+            <h5>更新内容</h5>
+            <hr>
+            <div class="input-group mb-3">
+                <div class="input-group-prepend">
+                    <lable class="input-group-text">价格区间</lable>
+                </div>
+                <input type="text" class="form-control min_price">
+                <div class="input-group-prepend">
+                    <lable class="input-group-text"> - </lable>
+                </div>
+                <input type="text" class="form-control max_price">
+            </div>
+            <div class="input-group mb-3 detail_pictures">
+                <div class="input-group-prepend">
+                    <lable class="input-group-text">详情页图片, 旧</lable>
+                </div>
+                <input type="text" class="form-control old_src" placeholder="src or url of img">
+                <div class="input-group-prepend">
+                    <lable class="input-group-text">新</lable>
+                </div>
+                <input type="text" class="form-control new_src" placeholder="src or url of img">
+                <button type="button" class="btn btn-sm btn-primary add">
+                    <i class="material-icons">playlist_add</i>
+                </button>
+            </div>
+            <div class="detail_picture_list">
+                
+            </div>
+        </div>
+        <div class="form-group product_selection">
+            <h5>选择产品</h5>
+            <div class="input-group" style="width:200px">
+{#                <div class="input-group-prepend">#}
+{#                    <lable class="input-group-text count" style="width:50px"></lable>#}
+{#                </div>#}
+                <select class="category" style="width: 200px">
+                    <option value="" class="selected">分 组</option>
+                </select>
+                <div class="input-group-append">
+{#                    <button type="button" class="btn btn-sm btn-primary reset">重 置</button>#}
+                </div>
+            </div>
+            <hr>
+            <table class="table table-hover table-sm table-striped product_list">
+                <thead class="thead-dark">
+                    <th scope="col">型 号</th>
+                    <th scope="col" class="title">标 题<span></span></th>
+                    <th scope="col">分 组</th>
+                    <th scope="col" class="tags">标 签</th>
+                    <th scope="col">价 格</th>
+                    <th scope="col" class="quality">分 层</th>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
     </div>
 </template>

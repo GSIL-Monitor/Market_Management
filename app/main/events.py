@@ -29,6 +29,7 @@ from libs.crawlers.keywords_crawler_amazon import KwclrAmazon
 
 p4ps = {}
 
+
 @socketio.on('add_task', namespace='/markets')
 def add_task(market, task):
     tasks = []
@@ -67,6 +68,7 @@ def add_task(market, task):
         tasks.append(obj)
     return tasks
 
+
 def find_next_task_id(task_type='recording'):
     max_tid = 0
     jobs = scheduler.get_jobs()
@@ -79,6 +81,7 @@ def find_next_task_id(task_type='recording'):
     max_tid += 1
     return task_type + '_' + str(max_tid)
 
+
 @socketio.on('pause_task', namespace='/markets')
 def pause_task(task_id):
     if task_id not in all_tasks:
@@ -88,6 +91,7 @@ def pause_task(task_id):
     scheduler.pause_job(task_id)
     job = scheduler.get_job(task_id)
     socketio.emit('event_task_paused', Task(job).__dict__, namespace='/markets', broadcast=True)
+
 
 @socketio.on('resume_task', namespace='/markets')
 def resume_task(task_id):
@@ -100,6 +104,7 @@ def resume_task(task_id):
     socketio.emit('event_task_resumed', Task(job).__dict__, namespace='/markets', broadcast=True)
     job.modify(next_run_time=datetime.now())
 
+
 @socketio.on('remove_task', namespace='/markets')
 def remove_task(task_id):
     if task_id not in all_tasks:
@@ -109,6 +114,7 @@ def remove_task(task_id):
     job = scheduler.get_job(task_id)
     if job:
         job.remove()
+
 
 @socketio.on('get_all_tasks', namespace='/markets')
 def get_all_tasks(market):
@@ -132,14 +138,17 @@ def get_all_tasks(market):
         tasks.append(task)
     return tasks
 
+
 @socketio.on('get_p4p_keywords_crawl_result_file_list', namespace='/markets')
 def get_p4p_keywords_crawl_result_file_list(market):
     root = market['directory'] + '_config'
     return [n for n in os.listdir(root) if os.path.isfile(os.path.join(root, n)) and n.startswith('p4p_keywords_crawl_result_')]
 
+
 @socketio.on('connect', namespace='/markets')
 def connect_products():
     pass
+
 
 @socketio.on('get_market', namespace='/markets')
 def get_market(name):
@@ -150,6 +159,7 @@ def get_market(name):
         market = None
     return market
 
+
 @socketio.on('update_market', namespace='/markets')
 def update_market(market):
     markets = JSON.deserialize('.', 'storage', 'markets.json')
@@ -157,6 +167,7 @@ def update_market(market):
     if key in markets:
         markets[key] = market
         JSON.serialize(markets, '.', 'storage', 'markets.json')
+
 
 @socketio.on('add_market', namespace='/markets')
 def add_market():
@@ -223,11 +234,13 @@ def remove_market(market):
         emit('notify', msg, room=request.sid)
         return False
 
+
 @socketio.on('serialize', namespace='/markets')
 def serialize(obj, market, paths, filename):
     root = market['directory']+'_config'
     JSON.serialize(obj, root, paths, filename)
     return
+
 
 @socketio.on('deserialize', namespace='/markets')
 def deserialize(market, paths, filename, shallow=False):
@@ -250,11 +263,13 @@ def deserialize(market, paths, filename, shallow=False):
 
     return objects
 
+
 @socketio.on('get_file_list', namespace='/markets')
 def get_file_list(market, paths):
     root = market['directory']
     path = os.path.join(root, *paths)
     return [n for n in os.listdir(path) if os.path.isfile(os.path.join(path, n))]
+
 
 @socketio.on('get_products', namespace='/markets')
 def get_products(market, paths):
@@ -286,18 +301,24 @@ def get_products(market, paths):
 
     return dict(folders=folders, files=files, attributes=attrs)
 
+
 @socketio.on('login_alibaba', namespace='/markets')
 def login_alibaba(lid, lpwd):
-    browser = current_app.data.browser
-    socketio.start_background_task(Alibaba.login, lid, lpwd, browser, socketio, '/markets', request.sid)
-    return
+    alibaba = current_app.data.alibaba
+    if not alibaba:
+        alibaba = Alibaba(lid, lpwd, socketio, '/markets', request.sid)
+        current_app.data.alibaba = alibaba
+        socketio.start_background_task(alibaba.login)
+
 
 @socketio.on('post_similar_products', namespace='/markets')
 def post_similar_products(products, similar_product_id):
-    browser = current_app.data.browser
-    socketio.start_background_task(backgound_post_similar_products, products, similar_product_id, browser, socketio, '/markets', request.sid)
+    alibaba = current_app.data.alibaba
+    alibaba.room = request.sid
+    socketio.start_background_task(backgound_post_similar_products, alibaba, products, similar_product_id, )
 
-def backgound_post_similar_products(products, similar_product_id, browser, socket, namespace, room):
+
+def backgound_post_similar_products(alibaba, products, similar_product_id):
     start = time.time()
     counter = 0
     for product in products:
@@ -306,41 +327,44 @@ def backgound_post_similar_products(products, similar_product_id, browser, socke
             spid = product['similar_ali_id']
 
         if not spid:
-            msg = {'type': 'danger'}
-            msg['content'] = '不能确定 相似产品的 阿里 ID'
-            socket.emit('notify', msg, namespace=namespace, room=room)
+            msg = {'type': "danger", 'content': "不能确定 相似产品的 阿里 ID"}
+            socketio.emit('notify', msg, namespace=alibaba.namespace, room=alibaba.room)
             return
 
-        result = Alibaba.post_similar_product(product, spid, browser, socket, namespace, room)
+        result = alibaba.post_similar_product(product, spid)
 
         if isinstance(result, Exception):
             print(result)
         else:
-            socket.emit('product_posting', result, namespace=namespace, room=room)
+            socketio.emit('product_posting', result, namespace=alibaba.namespace, room=alibaba.room)
         counter += 1
 
-    socket.emit('product_posting_finished', namespace=namespace, room=room)
+        socketio.emit('product_posting_finished', namespace=alibaba.namespace, room=alibaba.room)
     end = time.time()
     total = end - start
     hour = total//3600
     minu = (total%3600)//60
     sec = total - hour * 3600 - minu * 60
 
-    msg = {'type':'primary'}
-    msg['content'] = '共发布 '+str(counter)+' 款产品，用时 '+str(hour)+'小时 '+str(minu)+'分 '+str(sec)+'秒，平均：'+ str(round(total/counter,2)) + '秒'
-    socket.emit('notify', msg, namespace=namespace, room=room)
+    msg = {'type': "primary",
+           'content': "共发布 " + str(counter) + " 款产品，用时 " + str(hour) + "小时 " + str(minu) + "分 " + str(
+               sec) + "秒，平均：" + str(round(total / counter, 2)) + "秒"}
+    socketio.emit('notify', msg, namespace=alibaba.namespace, room=alibaba.room)
+
 
 @socketio.on('crawl_product_data_from_alibaba', namespace='/markets')
 def crawl_product_data_from_alibaba(ali_id):
-    browser = current_app.data.browser
     result_message = 'crawl_product_data_from_alibaba_result'
-    socketio.start_background_task(Alibaba.crawl_product_data, result_message, ali_id, browser, socketio, '/markets', request.sid)
+    alibaba = current_app.data.alibaba
+    alibaba.room = request.sid
+    socketio.start_background_task(alibaba.crawl_product_data, result_message, ali_id)
 
 
 @socketio.on('get_posted_product_info', namespace='/markets')
 def get_posted_product_info(page_quantity):
-    browser = current_app.data.browser
-    socketio.start_background_task(Alibaba.get_posted_product_info, page_quantity, browser, socketio, '/markets', request.sid)
+    alibaba = current_app.data.alibaba
+    alibaba.room = request.sid
+    socketio.start_background_task(alibaba.get_posted_product_info, page_quantity)
 
 
 @socketio.on('get_products_data', namespace='/markets')
@@ -397,30 +421,28 @@ def is_title_reserved(title, market):
     return result
 
 
-@socketio.on('change_products_price', namespace='/markets')
-def change_products_price(objects):  # [{alie_id: [min, max]}]
-    browser = current_app.data.browser
-    socketio.start_background_task(change_product_price, objects, browser, socketio, request.sid)
+@socketio.on('update_products', namespace='/markets')
+def update_products(objects):
+    alibaba = current_app.data.alibaba
+    alibaba.room = request.sid
+    socketio.start_background_task(background_update_products, alibaba, objects)
 
 
-def change_product_price(objects, browser, socketio, room):
-    counter = 0
-    for obj in objects:
-        ali_id = obj['ali_id']
-        price_range = obj['price_range']
-        Alibaba.change_product_price(ali_id, price_range, browser, socketio, '/markets', room)
-        counter += 1
+def background_update_products(alibaba, objects):
+    for idx, obj in enumerate(objects):
+        alibaba.update_product(obj)
+
 
 @socketio.on('crawl_keywords', namespace='/markets')
 def crawl_keywords(keyword, website, page_quantity, market):
     socketio.start_background_task(backgound_crawling_keywords, keyword, website, page_quantity, request.sid, socketio, market)
 
+
 def backgound_crawling_keywords(keyword, website, page_quantity, sid, socketio, market):
     filename = 'keywords.json'
     root = market['directory'] + '_config'
 
-    msg = {'type':'primary'}
-    msg['content'] = '打开浏览器 ... ...'
+    msg = {'type': "primary", 'content': "打开浏览器 ... ..."}
     socketio.emit('notify', msg, namespace='/markets', room=sid)
 
     chrome_options_headless = webdriver.ChromeOptions()
@@ -431,7 +453,6 @@ def backgound_crawling_keywords(keyword, website, page_quantity, sid, socketio, 
     chrome_options_headless.add_argument('--ignore-certificate-errors')
     browser = webdriver.Chrome(chrome_options=chrome_options_headless)
 
-    result = []
     if website == 'alibaba':
         crawler_name = re.sub(' ', '_', keyword) + ' - ' + str(page_quantity) + '页 - 阿里'
         crawler = KwclrAlibaba(browser, keyword, page_quantity, sid, socketio)
@@ -449,20 +470,16 @@ def backgound_crawling_keywords(keyword, website, page_quantity, sid, socketio, 
         crawler_name = re.sub(' ', '_', keyword) + ' - ' + str(page_quantity) + '页 - Amazon'
         crawler = KwclrAmazon(browser, keyword, page_quantity, sid, socketio)
 
-
-    msg = {'type':'primary'}
-    msg['content'] = '开始爬取 ... ...'
+    msg = {'type': 'primary', 'content': "开始爬取 ... ..."}
     socketio.emit('notify', msg, namespace='/markets', room=sid)
 
     result = crawler.start()
 
-    msg = {'type':'primary'}
-    msg['content'] = '爬取结束，关闭浏览器 ... ...'
+    msg = {'type': "primary", 'content': "爬取结束，关闭浏览器 ... ..."}
     socketio.emit('notify', msg, namespace='/markets', room=sid)
     browser.quit()
 
-    msg = {'type':'primary'}
-    msg['content'] = '保存结果 ... ...'
+    msg = {'type': "primary", 'content': "保存结果 ... ..."}
     socketio.emit('notify', msg, namespace='/markets', room=sid)
     obj = JSON.deserialize(root, [], filename)
     if not obj:
@@ -472,14 +489,17 @@ def backgound_crawling_keywords(keyword, website, page_quantity, sid, socketio, 
 
     socketio.emit('keyword_crawling_result', {'key': crawler_name, 'result': result}, namespace='/markets', room=sid)
 
+
 @socketio.on('refresh_p4p_keywords', namespace='/markets')
 def refresh_p4p_keywords(market):
     socketio.start_background_task(background_task_refresh_p4p_keywords, market, socketio, '/markets', request.sid)
+
 
 def background_task_refresh_p4p_keywords(market, socketio, ns, room):
     p4p = get_p4p(market, socketio, room)
     keywords = p4p.crawl_keywords()
     socketio.emit('refresh_p4p_keywords_result', keywords, namespace=ns, room=room)
+
 
 def get_p4p(market, socketio, room):
     if market['name'] in p4ps:

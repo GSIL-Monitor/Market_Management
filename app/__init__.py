@@ -116,7 +116,7 @@ def create_app(debug=True):
     chrome_options_headless.add_argument('--ignore-certificate-errors')
     data.chrome_options_headless = chrome_options_headless
 
-    
+    data.alibaba = None
     app.data = data
     return app
 

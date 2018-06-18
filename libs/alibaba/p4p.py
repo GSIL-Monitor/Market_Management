@@ -328,7 +328,7 @@ class P4P():
 
                 divs = soup.find_all('div', class_='m-product-item')
                 for idx,div in enumerate(divs):
-#                     print(kws, idx)
+                    # print(kws, idx)
                     company = {}
                     extra = div.find(class_='item-extra')
                     if extra:
@@ -361,10 +361,10 @@ class P4P():
                 print('Error: ', e)
                 traceback.print_exc()
             finally:
-#                 self.browser.execute_script("window.close()")
+                # self.browser.execute_script("window.close()")
                 self.browser.switch_to_window(self.browser.window_handles[0])
 
-        return {'top_sponsor':top_sponsor, 'sponsor_list':sponsor_list}
+        return {'top_sponsor': top_sponsor, 'sponsor_list': sponsor_list}
 
     def load_url(self):
         self.browser.get(self.api)
@@ -403,7 +403,7 @@ class P4P():
         count = 0
         for sponsor in sponsor_list:
             count += 1
-            if 'glittereyelash.en.alibaba.com' in sponsor['url']:
+            if "glittereyelash.en.alibaba.com" in sponsor['url']:
                 idx = count
                 break
         return idx

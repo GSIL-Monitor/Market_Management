@@ -1,0 +1,39 @@
+div.update .form-group{
+    position: relative;
+}
+.form-group h5+.input-group{
+    position: absolute;
+    top: 0px;
+    right: 0px;
+}
+
+table.product_list td{
+    vertical-align: middle;
+}
+table.product_list .tags{
+    width:50px;
+}
+table.product_list .quality{
+    width:75px;
+    text-align: center;
+}
+table.product_list .quality span{
+    display: inline-block;
+}
+table.product_list tbody{
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+table.product_list tbody tr.selected{
+    background-color: lightblue;
+}
+
+.update_content .detail_picture_list img{
+    width:260px;
+}
+
+.update_content .detail_picture_list .picture_pair.selected{
+    border: solid 1px blue;
+}

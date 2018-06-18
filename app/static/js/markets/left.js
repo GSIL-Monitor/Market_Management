@@ -43,6 +43,7 @@ function init(data){
         tabs.append_tab(new Tab_template(socket, market))
         tabs.append_tab(new Tab_keywords(socket, market))
         tabs.append_tab(new Tab_pictures(socket, market))
+        tabs.append_tab(new Tab_update(socket, market))
         tabs.append_tab(new Tab_market_others(socket, market))
 
         let m = {'name':market.name, 'directory':market.directory}

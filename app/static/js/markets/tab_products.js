@@ -16,7 +16,7 @@ function Tab_products(socket, market, categories=undefined, directory=undefined,
     buttons = `${buttons}<input class="similar_product_id" type="text" placeholder="阿里产品ID">`
     buttons = `${buttons}<div class="input-group-append">`
     buttons = `${buttons}<button type="button" class="btn btn-sm btn-primary post_product">发布产品</button>`
-    buttons = `${buttons}<button type="button" class="btn btn-sm btn-primary change_products_price">修改价格</button>`
+    // buttons = `${buttons}<button type="button" class="btn btn-sm btn-primary change_products_price">修改价格</button>&ndash;&gt;&ndash;&gt;&ndash;&gt;&ndash;&gt;-->`
     buttons = `${buttons}</div>`
     buttons = `<div class="input-group">${buttons}</div>`
     this.$button_group = $(`<div class="btn-group mr-2 products" role="group">${buttons}</div>`)
@@ -151,22 +151,22 @@ function Tab_products(socket, market, categories=undefined, directory=undefined,
         }
     })
 
-    this.$button_group.find('button.change_products_price').click(function(){
-        let text = prompt(`请输入 最低价格 和 最高价格，以空格隔开：`)
-        let price_range = text.trim().split(' ')
-
-        let objects = []
-        let $cards = that.$content.find('.product_list .card.posted')
-        for(let card of $cards){
-            let product = $(card).data('product')
-            let obj = {}
-            obj['ali_id'] = product.ali_id
-            obj['price_range'] = price_range
-            objects.push(obj)
-        }
-
-        that.socket.emit('change_products_price', objects)
-    })
+    // this.$button_group.find('button.change_products_price').click(function(){
+    //     let text = prompt(`请输入 最低价格 和 最高价格，以空格隔开：`)
+    //     let price_range = text.trim().split(' ')
+    //
+    //     let objects = []
+    //     let $cards = that.$content.find('.product_list .card.posted')
+    //     for(let card of $cards){
+    //         let product = $(card).data('product')
+    //         let obj = {}
+    //         obj['ali_id'] = product.ali_id
+    //         obj['price_range'] = price_range
+    //         objects.push(obj)
+    //     }
+    //
+    //     that.socket.emit('change_products_price', objects)
+    // })
 
     this.$button_group.find('button.post_product').click(function(){
 
@@ -391,7 +391,7 @@ Tab_products.prototype.load_product_list = function(products){
         let src = `/markets/${this.market['name']}/${paths.join('/')}/${folder}/${file_name}`
         let html = `<img class="card-img-top" src="${src}" alt="Card image cap">`
         html = `${html}<div class="card-footer"><small class="text-muted">${id}</small></div>`
-
+console.log(this.market)
         if('ali_id' in product && product.ali_id){
             html = `<div class="card ${id} posted">${html}</div>`
         }else if(id in this.market['new_posted_products']){
