@@ -445,13 +445,13 @@ def backgound_crawling_keywords(keyword, website, page_quantity, sid, socketio, 
     msg = {'type': "primary", 'content': "打开浏览器 ... ..."}
     socketio.emit('notify', msg, namespace='/markets', room=sid)
 
-    chrome_options_headless = webdriver.ChromeOptions()
+    chrome_options = webdriver.ChromeOptions()
     # chrome_options_headless.add_argument('--headless')
-    chrome_options_headless.add_argument('--disable-gpu')
-    chrome_options_headless.add_argument('--disable-extensions')
-    chrome_options_headless.add_argument('--disable-logging')
-    chrome_options_headless.add_argument('--ignore-certificate-errors')
-    browser = webdriver.Chrome(chrome_options=chrome_options_headless)
+    chrome_options.add_argument('--disable-gpu')
+    chrome_options.add_argument('--disable-extensions')
+    chrome_options.add_argument('--disable-logging')
+    chrome_options.add_argument('--ignore-certificate-errors')
+    browser = webdriver.Chrome(chrome_options=chrome_options)
 
     if website == 'alibaba':
         crawler_name = re.sub(' ', '_', keyword) + ' - ' + str(page_quantity) + '页 - 阿里'
@@ -488,7 +488,7 @@ def backgound_crawling_keywords(keyword, website, page_quantity, sid, socketio, 
     JSON.serialize(obj, root, [], filename)
 
     socketio.emit('keyword_crawling_result', {'key': crawler_name, 'result': result}, namespace='/markets', room=sid)
-
+    browser.quit()
 
 @socketio.on('refresh_p4p_keywords', namespace='/markets')
 def refresh_p4p_keywords(market):

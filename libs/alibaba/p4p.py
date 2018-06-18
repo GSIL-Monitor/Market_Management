@@ -33,14 +33,9 @@ class P4P():
         self.load_keywords('recording')
         self.load_keywords('monitor')
 
-        chrome_options_headless = webdriver.ChromeOptions()
-        # chrome_options_headless.add_argument('--headless')
-        chrome_options_headless.add_argument('--disable-gpu')
-        chrome_options_headless.add_argument('--disable-extensions')
-        chrome_options_headless.add_argument('--disable-logging')
-        self.browser = webdriver.Chrome(chrome_options=chrome_options_headless)
-        Alibaba.login(lid, lpwd, self.browser, socketio, namespace, room)
-
+        alibaba = Alibaba(lid, lpwd, socketio, namespace, room)
+        alibaba.login()
+        self.browser = alibaba.browser
         self.lock = threading.RLock()
         self.recent_prices = {}
 

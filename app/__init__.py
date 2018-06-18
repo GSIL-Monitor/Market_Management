@@ -21,12 +21,6 @@ from utils.eventlet_patcher import eventlet_patcher
 from types import SimpleNamespace
 
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import NoSuchElementException
 
 import traceback
 import threading
@@ -96,16 +90,13 @@ def create_app(debug=True):
     #
     # setup selenium with chrome browser
     #
-    chrome_options = webdriver.ChromeOptions()
-    # chrome_options.add_argument('--headless')
-    chrome_options.add_argument('--disable-gpu')
-    chrome_options.add_argument('--disable-extensions')
-    chrome_options.add_argument('--disable-logging')
-    chrome_options.add_argument('--ignore-certificate-errors')
-    # chrome_options.binary_location = r'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe'
-    # chrome_prefs = {'profile.managed_default_content_settings.images': 2}
-    # chrome_options.experimental_options["prefs"] = chrome_prefs
-    data.browser = webdriver.Chrome(chrome_options=chrome_options)
+    # chrome_options = webdriver.ChromeOptions()
+    # # chrome_options.add_argument('--headless')
+    # chrome_options.add_argument('--disable-gpu')
+    # chrome_options.add_argument('--disable-extensions')
+    # chrome_options.add_argument('--disable-logging')
+    # chrome_options.add_argument('--ignore-certificate-errors')
+    # data.browser = webdriver.Chrome(chrome_options=chrome_options)
 
 
     chrome_options_headless = webdriver.ChromeOptions()
@@ -114,7 +105,7 @@ def create_app(debug=True):
     chrome_options_headless.add_argument('--disable-extensions')
     chrome_options_headless.add_argument('--disable-logging')
     chrome_options_headless.add_argument('--ignore-certificate-errors')
-    data.chrome_options_headless = chrome_options_headless
+    data.chrome_options = chrome_options_headless
 
     data.alibaba = None
     app.data = data

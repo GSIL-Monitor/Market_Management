@@ -348,7 +348,7 @@ class Alibaba:
                 if img.has_attr('ori-height'):
                     del img['ori-height']
                 break
-        print('==============>', data['ali_id'], result)
+
         if result:
             js_templ = "document.querySelector('{selector}').value = '{value}';"
             js = js_templ.format(selector='#mceu_46 textarea', value=re.sub('\n', '\\\\n', str(soup)))
