@@ -267,8 +267,8 @@ class P4P():
                             print(kws, end=' > ')
                                 
                             if self.find_sponsor_list_position(kws=kws) == 0:
-                                print('set_price: at pos 5', end=" > ")
-                                self.set_price(tr, position=5)
+                                print('set_price: at pos 4', end=" > ")
+                                self.set_price(tr, position=4)
                             if not self.is_on(tr):
                                 print('turn_on', end=" > ")
                                 self.turn_on(tr)
@@ -455,8 +455,8 @@ class P4P():
         if not position and not price:
             return
 
-        pos = 2
-        max_price = 35
+        pos = 3
+        max_price = 30
         sum = 0
         id = tr.find_element_by_css_selector('td:first-child input').get_attribute('value').strip()
         for prices in self.recent_prices[id]:
@@ -493,7 +493,7 @@ class P4P():
                     while True:
                         btn = price_table_tbody.find_element_by_css_selector('td:nth-child('+str(int(position)+1)+') a, td:last-child a')
                         p = float(btn.text.strip())
-                        if p < max_price:
+                        if p <= max_price:
                             self.click(btn)
                             break
                         if position >= 5:

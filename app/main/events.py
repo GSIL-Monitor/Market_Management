@@ -50,7 +50,7 @@ def add_task(market, task):
         kwargs['tid'] = task_id
         job = scheduler._scheduler.add_job(p4p.monitor, id=task_id, trigger='interval', kwargs=kwargs, minutes=int(task['interval']), start_date=task['start_date'], end_date=task['end_date'])
         all_tasks[task_id] = {'job': job, 'is_last_run': False, 'is_running': False}
-        job.modify(next_run_time=datetime.now())
+        # job.modify(next_run_time=datetime.now())
         obj = Task(job).__dict__
         obj['is_last_run'] = False
         obj['is_running'] = False
