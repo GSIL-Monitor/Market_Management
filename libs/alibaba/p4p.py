@@ -304,7 +304,7 @@ class P4P():
 
     def find_sponsors(self, kws):
         with self.lock:
-            url = 'https://www.alibaba.com/trade/search?fsb=y&IndexArea=product_en&CatId=&SearchText='+re.sub(' +', '+', kws)
+            url = 'https://www.alibaba.com/trade/search?fsb=y&IndexArea=product_en&viewtype=L&CatId=&SearchText='+re.sub(' +', '+', kws)
 
             if len(self.browser.window_handles) == 1:
                 self.browser.execute_script("window.open()")
