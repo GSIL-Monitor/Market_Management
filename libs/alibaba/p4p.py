@@ -169,12 +169,12 @@ class P4P():
                             sponsors = self.find_sponsors(kws)
                             prices = self.find_prices(tr=None)
 
-                            if id in self.keywords_list['monitor']:
-                                if self.find_sponsor_list_position(sponsors=sponsors['sponsor_list']) == 0:
-                                    if self.is_on(tr):
-                                        print('turn_off', end=" > ")
-                                        self.turn_off(tr)
-                                        table_reloaded = True
+                            # if id in self.keywords_list['monitor']:
+                            #     if self.find_sponsor_list_position(sponsors=sponsors['sponsor_list']) == 0:
+                            #         if self.is_on(tr):
+                            #             print('turn_off', end=" > ")
+                            #             self.turn_off(tr)
+                            #             table_reloaded = True
 
                             if prices:
                                 keywords.append([dt, id, kws, grp, prices, sponsors])
@@ -265,8 +265,9 @@ class P4P():
                             kws = tr.find_element_by_css_selector('td:nth-child(3)').text.strip()
 
                             print(kws, end=' > ')
-                                
-                            if self.find_sponsor_list_position(kws=kws) == 0:
+
+                            current_position = self.find_sponsor_list_position(kws=kws)
+                            if current_position == 0 or current_position < 4:
                                 print('set_price: at pos 4', end=" > ")
                                 self.set_price(tr, position=4)
                             if not self.is_on(tr):
@@ -300,7 +301,6 @@ class P4P():
         date_str = keywords[0][0].split(' ')[0]
         fn = 'p4p_keywords_crawl_result_'+date_str+'.json.gz'
         JSON.serialize(keywords, root, [], fn, append=True)
-
 
     def find_sponsors(self, kws):
         with self.lock:
