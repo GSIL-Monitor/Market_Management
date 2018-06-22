@@ -267,9 +267,9 @@ class P4P():
                             print(kws, end=' > ')
 
                             current_position = self.find_sponsor_list_position(kws=kws)
-                            if current_position == 0 or current_position < 4:
-                                print('set_price: at pos 4', end=" > ")
-                                self.set_price(tr, position=4)
+                            if current_position <= 4:
+                                print('set_price: at pos 5', end=" > ")
+                                self.set_price(tr, position=5)
                             if not self.is_on(tr):
                                 print('turn_on', end=" > ")
                                 self.turn_on(tr)
