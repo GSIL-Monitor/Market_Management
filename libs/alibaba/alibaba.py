@@ -15,13 +15,14 @@ import time
 import re
 import traceback
 
+
 class Alibaba:
     api = 'https://i.alibaba.com'
     api_post_similar_product = 'https://hz-productposting.alibaba.com/product/post_product_interface.htm?from=manage&import_product_id='
     api_product_manage = 'https://hz-productposting.alibaba.com/product/products_manage.htm'
 
     chrome_options = webdriver.ChromeOptions()
-    # chrome_options.add_argument('--headless')
+    chrome_options.add_argument('--headless')
     chrome_options.add_argument('--disable-gpu')
     chrome_options.add_argument('--disable-extensions')
     chrome_options.add_argument('--disable-logging')

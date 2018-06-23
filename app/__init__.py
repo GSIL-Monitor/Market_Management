@@ -49,7 +49,8 @@ def scheduler_listener(event):
         job = scheduler.get_job(event.job_id)
         socketio.emit('event_task_added', Task(job).__dict__, namespace='/markets', broadcast=True)
     elif event.code == EVENT_JOB_REMOVED:
-        tasks[event.job_id]['is_last_run'] = True
+        if event.job_id in tasks:
+            tasks[event.job_id]['is_last_run'] = True
         socketio.emit('event_task_removed', event.job_id, namespace='/markets', broadcast=True)
     elif event.code == EVENT_JOB_EXECUTED:
         job = scheduler.get_job(event.job_id)
