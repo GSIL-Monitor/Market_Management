@@ -21,7 +21,7 @@ class Alibaba:
     api_product_manage = 'https://hz-productposting.alibaba.com/product/products_manage.htm'
 
     chrome_options = webdriver.ChromeOptions()
-    # chrome_options_headless.add_argument('--headless')
+    # chrome_options.add_argument('--headless')
     chrome_options.add_argument('--disable-gpu')
     chrome_options.add_argument('--disable-extensions')
     chrome_options.add_argument('--disable-logging')
@@ -231,6 +231,7 @@ class Alibaba:
             attrs = None
             template = None
             msg = "爬取产品 [" + ali_id + "] 数据 出错, " + str(e)
+            traceback.print_exc()
         finally:
             browser.get('https://i.alibaba.com')
 

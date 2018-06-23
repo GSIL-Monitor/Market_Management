@@ -16,14 +16,24 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 from pyquery import PyQuery as pq
 
+import json
+import requests
 import time
 import re
 
 import traceback
 import threading
 
+
 class P4P():
-    
+    headers = {'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.87 Safari/537.36"}
+    headers['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8'
+    headers['Accept-Encoding'] = 'gzip, deflate, br'
+    headers['Accept-Language'] = 'zh-CN,zh;q=0.9,en;q=0.8'
+    headers['Connection'] = 'Keep-Alive'
+    headers['Host'] = 'www.alibaba.com'
+    headers['Upgrade-Insecure-Requests'] = '1'
+
     api = 'https://www2.alibaba.com/manage_ad_keyword.htm'
     keywords_list = {}
     
@@ -303,6 +313,44 @@ class P4P():
         JSON.serialize(keywords, root, [], fn, append=True)
 
     def find_sponsors(self, kws):
+        url = 'https://www.alibaba.com/trade/search?fsb=y&IndexArea=product_en&viewtype=L&CatId=&SearchText=' + re.sub(
+            ' +', '+', kws)
+        self.headers['Referer'] = url
+
+        response = requests.get(url, headers=self.headers)
+
+        top_sponsor = None
+        sponsor_list = []
+
+        result = re.search(r'_search_result_data =(.*)page.setPageData\(_search_result_data\)', response.text,
+                           re.M | re.DOTALL)
+        obj = json.loads(result.group(1))
+        items = obj['normalList']
+        for idx, item in enumerate(items):
+            company = {}
+            if (item['isBrandAd']):
+                top_sponsor = company
+            elif (item['isP4p']):
+                sponsor_list.append(company)
+            else:
+                break
+
+            company['years'] = item['supplierYear']
+            company['name'] = item['supplierName']
+            company['url'] = item['supplierHref']
+            if 'record' in item:
+                company['record'] = []
+                if 'transaction' in item['record']:
+                    company['record'].append(item['record']['transaction']['num'])
+                    company['record'].append('Transactions(6 months)')
+                    company['record'].append(item['record']['transaction']['conducted'])
+                if 'responseRate' in item['record']:
+                    company['record'].append('Response Rate')
+                    company['record'].append(item['record']['responseRate'])
+
+        return {'top_sponsor': top_sponsor, 'sponsor_list': sponsor_list}
+
+    def find_sponsors_backup(self, kws):
         with self.lock:
             url = 'https://www.alibaba.com/trade/search?fsb=y&IndexArea=product_en&viewtype=L&CatId=&SearchText='+re.sub(' +', '+', kws)
 

@@ -72,8 +72,7 @@ function Tab_Chart(socket, market=undefined, categories=undefined, directory=und
                             sps.push(undefined)
                             continue
                         }
-
-                        let sp_id = sp.url.match('.*://([^/]+\.alibaba\.com)/.*')[1]
+                        let sp_id = sp.url.match('.*//([^/]+\.alibaba\.com)/.*')[1]
                         sps.push(sp_id)
 
                         let sponsor = undefined
