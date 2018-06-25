@@ -46,6 +46,9 @@ function Tab_Chart(socket, market=undefined, categories=undefined, directory=und
             for(let turn of data){
                 for(let item of turn){
                     let id = item[1]
+                    // if(id == '77942874814'){
+                    //     console.log(item)
+                    // }
                     let keyword = undefined
                     if(id in keywords){
                         keyword = keywords[id]
@@ -58,6 +61,10 @@ function Tab_Chart(socket, market=undefined, categories=undefined, directory=und
                     let lines = keyword.lines
                     lines[0].push(moment(item[0]))
                     for(let [idx, price] of item[4].entries()){
+                        if(idx>4){
+                            console.log('prices array is longer than expected', item)
+                            break
+                        }
                         lines[idx+1].push(+price)
                     }
 

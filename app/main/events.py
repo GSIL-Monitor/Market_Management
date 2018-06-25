@@ -3,6 +3,8 @@ from flask_socketio import emit, join_room, leave_room
 from .. import socketio
 from .. import scheduler
 from .. import tasks as all_tasks
+from .. import p4ps
+from .. import logger
 
 from datetime import datetime
 from libs.json import JSON
@@ -26,8 +28,6 @@ from libs.crawlers.keywords_crawler_alibaba import KwclrAlibaba
 from libs.crawlers.keywords_crawler_ali_sr import KwclrAliSr
 from libs.crawlers.keywords_crawler_ali_sp import KwclrAliSp
 from libs.crawlers.keywords_crawler_amazon import KwclrAmazon
-
-p4ps = {}
 
 
 @socketio.on('add_task', namespace='/markets')

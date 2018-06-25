@@ -119,3 +119,7 @@ div.task table.task td button{
     width: 50px;
     margin-left:5px;
 }
+
+div.task label.active{
+    background-color: #007bff !important;
+}

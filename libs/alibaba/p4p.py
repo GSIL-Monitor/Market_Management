@@ -20,9 +20,13 @@ import json
 import requests
 import time
 import re
+import math
 
 import traceback
 import threading
+
+import logging
+from logging.handlers import TimedRotatingFileHandler
 
 
 class P4P():
@@ -30,7 +34,8 @@ class P4P():
     headers['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8'
     headers['Accept-Encoding'] = 'gzip, deflate, br'
     headers['Accept-Language'] = 'zh-CN,zh;q=0.9,en;q=0.8'
-    headers['Connection'] = 'Keep-Alive'
+    # headers['Connection'] = 'Keep-Alive'
+    headers['Connection'] = 'close'
     headers['Host'] = 'www.alibaba.com'
     headers['Upgrade-Insecure-Requests'] = '1'
 
@@ -38,16 +43,26 @@ class P4P():
     keywords_list = {}
     
     def __init__(self, market, lid, lpwd, socketio, namespace=None, room=None):
+        self.logger = logging.getLogger(market['name'])
+        self.logger.setLevel(logging.DEBUG)
+        fh = TimedRotatingFileHandler('log/p4p['+market['name']+'].log', when="d", interval=1,  backupCount=7)
+        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        fh.setFormatter(formatter)
+        self.logger.addHandler(fh)
+
+        self.logger.info('initialize .... '+market['name'])
         self.market = market
         self.keywords_history = []
         self.load_keywords('recording')
         self.load_keywords('monitor')
 
+        self.logger.info('open browser and login')
         alibaba = Alibaba(lid, lpwd, socketio, namespace, room)
         alibaba.login()
         self.browser = alibaba.browser
         self.lock = threading.RLock()
         self.recent_prices = {}
+
 
     def load_keywords(self, tp):
         if not tp:
@@ -114,19 +129,23 @@ class P4P():
         return keywords
 
     def crawl(self, group="all", tid=None, socketio=None, tasks=None):
-        tasks[tid]['is_running'] = True
-        msg = {'name': 'P4P.crawl', 'tid': tid, 'group': group, 'is_last_run': tasks[tid]['is_last_run']}
-        socketio.emit('event_task_start_running', msg, namespace='/markets', broadcast=True)
+        if tid:
+            tasks[tid]['is_running'] = True
+            msg = {'name': 'P4P.crawl', 'tid': tid, 'group': group, 'is_last_run': tasks[tid]['is_last_run']}
+            socketio.emit('event_task_start_running', msg, namespace='/markets', broadcast=True)
 
         try:
             keywords = []
             self.load_keywords('recording')
-            tasks[tid]['progress'] = 1
-            socketio.emit('event_task_progress', {'tid': tid, 'progress': 1}, namespace='/markets', broadcast=True)
+            if tid:
+                tasks[tid]['progress'] = 1
+                socketio.emit('event_task_progress', {'tid': tid, 'progress': 1}, namespace='/markets', broadcast=True)
             with self.lock:
                 self.load_url()
-                tasks[tid]['progress'] = 2
-                socketio.emit('event_task_progress', {'tid': tid, 'progress': 2}, namespace='/markets', broadcast=True)
+                if tid:
+                    tasks[tid]['progress'] = 2
+                    socketio.emit('event_task_progress', {'tid': tid, 'progress': 2}, namespace='/markets',
+                                  broadcast=True)
                 all_kws_count = int(self.browser.find_element_by_css_selector('a.all-kwcount span').text)
 
                 kws_count = 0
@@ -134,23 +153,25 @@ class P4P():
                     table_reloaded = True
                     css_selector = "div.keyword-manage .bp-table-main-wraper>table"
                     table = self.browser.find_element_by_css_selector(css_selector)
-                    print(self.keywords_list['recording'])
+                    # print(self.keywords_list['recording'])
                     idx = 0
                     while True:
                         kws_count += 1
-                        tasks[tid]['progress'] = int(kws_count/all_kws_count*97)+3
-                        socketio.emit('event_task_progress', {'tid': tid, 'progress': tasks[tid]['progress']}, namespace='/markets', broadcast=True)
+                        if tid:
+                            tasks[tid]['progress'] = int(kws_count / all_kws_count * 97) + 3
+                            socketio.emit('event_task_progress', {'tid': tid, 'progress': tasks[tid]['progress']},
+                                          namespace='/markets', broadcast=True)
 
                         print(table_reloaded, end=" > ")
                         if table_reloaded:
-                            trs =  table.find_elements_by_css_selector('tbody tr')
+                            trs = table.find_elements_by_css_selector('tbody tr')
                             table_reloaded = False
-                        
+
                         print('index:', idx, len(trs), end=' > ')
                         if idx >= len(trs):
                             print('')
                             break
-                        
+
                         try:
                             tr = trs[idx]
                             id = tr.find_element_by_css_selector('td:first-child input').get_attribute('value').strip()
@@ -165,20 +186,39 @@ class P4P():
                                     print('skipped_not_in_group', group, grp)
                                     idx += 1
                                     continue
-                                
+
                             dt = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                             kws = tr.find_element_by_css_selector('td:nth-child(3)').text.strip()
-                            
+
                             print(kws, end=' > ')
-                            
+
                             if not self.open_price_dialog(tr):
                                 print('skipped_2')
                                 idx += 1
                                 continue
 
                             sponsors = self.find_sponsors(kws)
-                            prices = self.find_prices(tr=None)
 
+                            # @redo: retry to fetch prices
+                            prices = []
+                            count = 0
+                            while count < 10:
+                                if count == 0:
+                                    prices = self.find_prices()
+                                elif count <= 5:
+                                    prices = self.find_prices(tr)
+                                else:
+                                    prices = ['0', '0', '0', '0', '0', '0']
+                                    print('failed to get prices, using default zero values')
+                                    break
+
+                                if prices is None:
+                                    break
+
+                                if len(prices) != 0:
+                                    break
+                                count += 1
+                                time.sleep(5)
                             # if id in self.keywords_list['monitor']:
                             #     if self.find_sponsor_list_position(sponsors=sponsors['sponsor_list']) == 0:
                             #         if self.is_on(tr):
@@ -188,34 +228,37 @@ class P4P():
 
                             if prices:
                                 keywords.append([dt, id, kws, grp, prices, sponsors])
-                                if(id not in self.recent_prices):
+                                if (id not in self.recent_prices):
                                     self.recent_prices[id] = []
                                 self.recent_prices[id].append(prices)
                                 if len(self.recent_prices[id]) > 5:
                                     self.recent_prices[id].pop(0)
-                    
+
                             idx += 1
                             print(' >>>>>> successful end ')
                         except StaleElementReferenceException as e:
                             table_reloaded = True
                             print(' >>>>>> failed ... .... , retry .... ...')
                             continue
-                            
+
                     if not self.next_page():
                         break
-            tasks[tid]['progress'] = 100
-            socketio.emit('event_task_progress', {'tid': tid, 'progress': 100}, namespace='/markets', broadcast=True)
+            if tid:
+                tasks[tid]['progress'] = 100
+                socketio.emit('event_task_progress', {'tid': tid, 'progress': 100}, namespace='/markets',
+                              broadcast=True)
             self.save_crawling_result(keywords)
 
         except Exception as e:
             print('Error: ', e)
             traceback.print_exc()
         finally:
-            tasks[tid]['is_running'] = False
-            tasks[tid]['progress'] = 0
-            if tasks[tid]['is_last_run']:
-                del tasks[tid]
-                socketio.emit('event_task_last_run_finished', {'tid': tid}, namespace='/markets', broadcast=True)
+            if tid:
+                tasks[tid]['is_running'] = False
+                tasks[tid]['progress'] = 0
+                if tasks[tid]['is_last_run']:
+                    del tasks[tid]
+                    socketio.emit('event_task_last_run_finished', {'tid': tid}, namespace='/markets', broadcast=True)
 
     def monitor(self, group='all', tid=None, socketio=None, tasks=None):
         tasks[tid]['is_running'] = True
@@ -317,7 +360,17 @@ class P4P():
             ' +', '+', kws)
         self.headers['Referer'] = url
 
-        response = requests.get(url, headers=self.headers)
+        response = None
+        while response is None:
+            try:
+                response = requests.get(url, headers=self.headers)
+                break
+            except Exception as e:
+                traceback.print_exc()
+                time.sleep(3)
+                print('==================== retry in 3 seconds =================================')
+                response = None
+                continue
 
         top_sponsor = None
         sponsor_list = []
@@ -422,7 +475,7 @@ class P4P():
     def open_price_dialog(self, tr):
         success = True
         btn = tr.find_element_by_css_selector('td:nth-child(5) a')
-        self.browser.implicitly_wait(1)
+        # self.browser.implicitly_wait(1)
         WebDriverWait(self.browser, 15).until(EC.invisibility_of_element_located((By.CSS_SELECTOR, 'div.ui-mask')))
         self.click(btn)
 
@@ -451,27 +504,37 @@ class P4P():
                 break
         return idx
 
-    def find_prices(self, tr=None):
+    def find_prices(self, tr=None):  # @redo: 相关度不足，无法进入搜索前5名。
         if tr and not self.open_price_dialog(tr):
             return []
-        
+
         prices = []
-        WebDriverWait(self.browser, 15).until(EC.invisibility_of_element_located((By.CSS_SELECTOR, 'div.bp-loading-panel')))
+        WebDriverWait(self.browser, 15).until(
+            EC.invisibility_of_element_located((By.CSS_SELECTOR, 'div.bp-loading-panel')))
+
         while True:
             try:
                 price_table_tbody_selector = ".sc-manage-edit-price-dialog table tbody,.sc-manage-edit-price-dialog p.util-clearfix"
-                price_table_tbody = WebDriverWait(self.browser, 15).until(EC.presence_of_element_located((By.CSS_SELECTOR, price_table_tbody_selector)))
+                price_table_tbody = WebDriverWait(self.browser, 15).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, price_table_tbody_selector)))
 
                 if price_table_tbody.tag_name == 'p':
+                    prices = None
                     break
 
                 for btn in price_table_tbody.find_elements_by_css_selector('a'):
-                    prices.append(btn.text.strip())
+                    price = btn.text.strip()
+                    float(price)
+                    prices.append(price)
+
+                print(prices, end=">")
                 break
             except StaleElementReferenceException:
                 self.browser.implicitly_wait(0.5)
                 continue
-
+            except ValueError:
+                prices = []
+                break
         webdriver.ActionChains(self.browser).send_keys(Keys.ESCAPE).perform()
         return prices
 
@@ -503,15 +566,15 @@ class P4P():
         if not position and not price:
             return
 
-        pos = 3
+        # pos = 3
         max_price = 30
-        sum = 0
-        id = tr.find_element_by_css_selector('td:first-child input').get_attribute('value').strip()
-        for prices in self.recent_prices[id]:
-            sum += float(prices[pos])
-        mean_price = sum/len(self.recent_prices[id])
-        if max_price > (mean_price + 0.1):
-            max_price = (mean_price + 0.1)
+        # sum = 0
+        # id = tr.find_element_by_css_selector('td:first-child input').get_attribute('value').strip()
+        # for prices in self.recent_prices[id]:
+        #     sum += float(prices[pos])
+        # mean_price = sum/len(self.recent_prices[id])
+        # if max_price > (mean_price + 0.1):
+        #     max_price = (mean_price + 0.1)
 
         if not self.open_price_dialog(tr):
             return False

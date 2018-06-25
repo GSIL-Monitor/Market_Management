@@ -81,8 +81,8 @@ function Tab_Task(socket, market=undefined, categories=undefined, directory=unde
     this.$content.find('table.task').on('click', 'button.remove_task', function(){
         let task_id = $(this).parents('tr').data('id')
         socket.emit('remove_task', task_id, function(){
-            that.$content.find('tbody tr.'+task_id).remove()
-            that.$content.find('tbody div.'+task_id).remove()
+            that.$content.find('table.task tbody tr.'+task_id).remove()
+            that.$content.find('table.task tbody div.'+task_id).remove()
         })
     })
 
@@ -148,8 +148,8 @@ function Tab_Task(socket, market=undefined, categories=undefined, directory=unde
     })
     socket.on('event_task_last_run_finished', function(obj){
         console.log('event_task_last_run_finished', obj)
-        that.$content.find('tbody tr.'+obj.tid).remove()
-        that.$content.find('tbody div.'+obj.tid).remove()
+        that.$content.find('table.task tbody tr.'+obj.tid).remove()
+        that.$content.find('table.task tbody div.'+obj.tid).remove()
     })
 
     socket.on('event_task_progress', function(obj){
@@ -165,7 +165,7 @@ function Tab_Task(socket, market=undefined, categories=undefined, directory=unde
 
 Tab_Task.prototype.update_progress = function(tid, progress){
     let that = this
-    let $progress = this.$content.find('tbody>div.progress.'+tid)
+    let $progress = this.$content.find('table.task tbody>div.progress.'+tid)
     if($progress.length == 0){
         let $tr = this.$content.find('tr.'+tid)
 
@@ -180,7 +180,7 @@ Tab_Task.prototype.update_progress = function(tid, progress){
         //         let html = `<div class="progress-bar" role="progressbar" style="width: ${progress}%;" aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100"></div>`
         //         html = `<div class="progress ${tid}" style="height: ${height}px;position: absolute;top: ${top}px;left: 0px;right: 0px;z-index: -1; background-color: ${bg_color};">${html}</div>`
         //         $progress = $(html)
-        //         that.$content.find('tbody').append($progress)
+        //         that.$content.find('table.task tbody').append($progress)
 
         //         clearInterval(interval)
         //     }
@@ -192,7 +192,7 @@ Tab_Task.prototype.update_progress = function(tid, progress){
         let html = `<div class="progress-bar" role="progressbar" style="width: ${progress}%;" aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100"></div>`
         html = `<div class="progress ${tid}" style="height: ${height}px;position: absolute;top: ${top}px;left: 0px;right: 0px;z-index: -1; background-color: ${bg_color};">${html}</div>`
         $progress = $(html)
-        this.$content.find('tbody').append($progress)
+        this.$content.find('table.task tbody').append($progress)
     }else{
         $progress.find('.progress-bar').attr('style', `width:${progress}%;`).attr('aria-valuenow', progress)
     }
@@ -201,7 +201,7 @@ Tab_Task.prototype.update_progress = function(tid, progress){
 
 
 Tab_Task.prototype.remove_progress = function(tid){
-    this.$content.find('tbody>div.progress.'+tid).remove()
+    this.$content.find('table.task tbody>div.progress.'+tid).remove()
 }
 
 

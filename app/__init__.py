@@ -19,19 +19,29 @@ from libs.json import JSON
 from utils.eventlet_patcher import eventlet_patcher
 
 from types import SimpleNamespace
-
 from selenium import webdriver
 
 import traceback
 import threading
 import arrow
 
+import logging
+from logging.handlers import TimedRotatingFileHandler
+
 eventlet_patcher()
 
 socketio = SocketIO()
 scheduler = APScheduler()
 
+p4ps = {}
 tasks = {}
+
+logger = logging.getLogger('APP')
+logger.setLevel(logging.DEBUG)
+fh = TimedRotatingFileHandler('log/app.log', when="d", interval=1, backupCount=7)
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+fh.setFormatter(formatter)
+logger.addHandler(fh)
 
 
 def scheduler_listener(event):
@@ -73,6 +83,8 @@ def create_app(debug=True):
     if app.debug and os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
         return app
 
+    logger.info('app begin to start ... ... ')
+
     scheduler.add_listener(scheduler_listener, EVENT_ALL)
     scheduler.start()
 
@@ -110,5 +122,6 @@ def create_app(debug=True):
 
     data.alibaba = None
     app.data = data
+    logger.info("app is now ready for accessing")
     return app
 

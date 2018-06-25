@@ -22,10 +22,11 @@ class Alibaba:
     api_product_manage = 'https://hz-productposting.alibaba.com/product/products_manage.htm'
 
     chrome_options = webdriver.ChromeOptions()
-    chrome_options.add_argument('--headless')
+    # chrome_options.add_argument('--headless')
     chrome_options.add_argument('--disable-gpu')
     chrome_options.add_argument('--disable-extensions')
     chrome_options.add_argument('--disable-logging')
+    chrome_options.add_argument('--disable-infobars')
     chrome_options.add_argument('--ignore-certificate-errors')
 
     def __init__(self, user, password, socketio=None, namespace=None, room=None):
@@ -35,6 +36,7 @@ class Alibaba:
         self.namespace = namespace
         self.room = room
         self.browser = webdriver.Chrome(chrome_options=self.chrome_options)
+        self.browser.set_window_size(1920, 1200)
 
     def notify(self, typo, message):
         if self.socketio:
