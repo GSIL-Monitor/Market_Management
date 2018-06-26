@@ -37,25 +37,25 @@ div.task>.input-group{
     min-width: 80px;
 }
 
-div.task table.task{
+div.task table{
     max-width: 1150px;
     min-width: 1100px;
     z-index: 10;
     position: relative;
 }
-div.task table.task tbody{
+div.task table.active_tasks tbody{
     position: relative;
     left: 0px;
     right: 0px;
 }
 
-div.task table.task tr.paused{
+div.task table.active_tasks tr.paused{
     background-color: lightgray;
 }
-div.task table.task tr.running{
+div.task table.active_tasks tr.running{
     background: rgba(0,0,0,0.0);
 }
-div.task table.task tbody .progress{
+div.task table.active_tasks tbody .progress{
     position: absolute;
     height: 36px;
     top: 34px;
@@ -64,56 +64,57 @@ div.task table.task tbody .progress{
     z-index: -1;
 }
 
-div.task table.task tbody div.progress-bar{
+div.task table.active_tasks tbody div.progress-bar{
     background-color: lightgreen
 }
-div.task table.task th{
+div.task table.active_tasks th{
     text-align: center;
 }
-div.task table.task td{
+div.task table.active_tasks td{
     vertical-align: middle;
 }
-div.task table.task th:first-child,
-div.task table.task td:first-child{
+div.task table.active_tasks th:first-child,
+div.task table.active_tasks td:first-child{
     width: 50px;
     text-align: center;
 }
-div.task table.task th:nth-child(2),
-div.task table.task td:nth-child(2){
+div.task table.active_tasks th:nth-child(2),
+div.task table.active_tasks td:nth-child(2){
     width: 60px;
     text-align: center;
 }
-div.task table.task th:nth-child(3),
-div.task table.task td:nth-child(3){
+div.task table.active_tasks th:nth-child(3),
+div.task table.active_tasks td:nth-child(3){
     width: 180px;
     text-align: center;
 }
-div.task table.task th:nth-child(4),
-div.task table.task td:nth-child(4){
+div.task table.active_tasks th:nth-child(4),
+div.task table.active_tasks td:nth-child(4){
     width: 180px;
     text-align: center;
 }
-div.task table.task th:nth-child(5),
-div.task table.task td:nth-child(5){
+div.task table.active_tasks th:nth-child(5),
+div.task table.active_tasks td:nth-child(5){
     width: 150px;
     text-align: center;
 }
 
-div.task table.task th:nth-child(6),
-div.task table.task td:nth-child(6){
+div.task table.active_tasks th:nth-child(6),
+div.task table.active_tasks td:nth-child(6){
     width: 78px;
     text-align: center;
 }
-div.task table.task th:nth-child(7),
-div.task table.task td:nth-child(7){
+div.task table.active_tasks th:nth-child(7),
+div.task table.active_tasks td:nth-child(7){
     width: 180px;
     text-align: center;
 }
-div.task table.task th:nth-child(8),
-div.task table.task td:nth-child(8){
+div.task table.active_tasks th:nth-child(8),
+div.task table.active_tasks td:nth-child(8){
     text-align: right;
 }
-div.task table.task td button{
+div.task table.active_tasks td button,
+div.task table.tasks_overview td button{
     padding: 0px;
     height: 26px;
     width: 50px;

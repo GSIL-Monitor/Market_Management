@@ -66,7 +66,29 @@ function Tab_Task(socket, market=undefined, categories=undefined, directory=unde
         }
     })
 
-    this.$content.find('table.task').on('click', 'button.toggle_task', function(){
+    this.$content.find('button.save_task').click(function(){
+
+        let task = {}
+        task['id'] = + new Date()
+        task['interval'] = $('#task_interval').val().trim()
+        task['start_date'] = $('#task_start_time').val().trim()+":00"
+        task['end_date'] = $('#task_end_time').val().trim()+":00"
+        task['group'] = $('#keywords_group').val().trim()
+        task['type'] = $('#task_type').val().trim()
+
+        let weekdays = []
+        for(let label of $(this).prev().find('label')){
+            if($(label).hasClass('active')){
+                weekdays.push(true)
+            }else{
+                weekdays.push(false)
+            }
+        }
+        task['weekdays'] = weekdays
+        that.$content.find('table.tasks_overview tbody').append(task_to_tr(task))
+    });
+
+    this.$content.find('table.active_tasks').on('click', 'button.toggle_task', function(){
         let btn_name = $(this).text()
         let task_id = $(this).parents('tr').data('id')
         if(btn_name == 'pause'){
@@ -78,11 +100,11 @@ function Tab_Task(socket, market=undefined, categories=undefined, directory=unde
         }
     })
 
-    this.$content.find('table.task').on('click', 'button.remove_task', function(){
+    this.$content.find('table.active_tasks').on('click', 'button.remove_task', function(){
         let task_id = $(this).parents('tr').data('id')
         socket.emit('remove_task', task_id, function(){
-            that.$content.find('table.task tbody tr.'+task_id).remove()
-            that.$content.find('table.task tbody div.'+task_id).remove()
+            that.$content.find('table.active_tasks tbody tr.'+task_id).remove()
+            that.$content.find('table.active_tasks tbody div.'+task_id).remove()
         })
     })
 
@@ -91,13 +113,13 @@ function Tab_Task(socket, market=undefined, categories=undefined, directory=unde
             return
         }
 
-        let count = that.$content.find('table.task tbody tr').length + 1
-        let tr = task_to_tr(task, count)
-        that.$content.find('table.task tbody').append(tr)
+        let count = that.$content.find('table.active_tasks tbody tr').length + 1;
+        let tr = active_task_to_tr(task, count);
+        that.$content.find('table.active_tasks tbody').append(tr)
     })
 
     socket.on('event_task_executed', function(task){
-        console.log('event_task_executed', task)
+        console.log('event_task_executed', task);
         if(task.market_name != market.name){
             return
         }
@@ -148,8 +170,8 @@ function Tab_Task(socket, market=undefined, categories=undefined, directory=unde
     })
     socket.on('event_task_last_run_finished', function(obj){
         console.log('event_task_last_run_finished', obj)
-        that.$content.find('table.task tbody tr.'+obj.tid).remove()
-        that.$content.find('table.task tbody div.'+obj.tid).remove()
+        that.$content.find('table.active_tasks tbody tr.'+obj.tid).remove()
+        that.$content.find('table.active_tasks tbody div.'+obj.tid).remove()
     })
 
     socket.on('event_task_progress', function(obj){
@@ -165,7 +187,7 @@ function Tab_Task(socket, market=undefined, categories=undefined, directory=unde
 
 Tab_Task.prototype.update_progress = function(tid, progress){
     let that = this
-    let $progress = this.$content.find('table.task tbody>div.progress.'+tid)
+    let $progress = this.$content.find('table.active_tasks tbody>div.progress.'+tid)
     if($progress.length == 0){
         let $tr = this.$content.find('tr.'+tid)
 
@@ -180,7 +202,7 @@ Tab_Task.prototype.update_progress = function(tid, progress){
         //         let html = `<div class="progress-bar" role="progressbar" style="width: ${progress}%;" aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100"></div>`
         //         html = `<div class="progress ${tid}" style="height: ${height}px;position: absolute;top: ${top}px;left: 0px;right: 0px;z-index: -1; background-color: ${bg_color};">${html}</div>`
         //         $progress = $(html)
-        //         that.$content.find('table.task tbody').append($progress)
+        //         that.$content.find('table.active_tasks tbody').append($progress)
 
         //         clearInterval(interval)
         //     }
@@ -192,7 +214,7 @@ Tab_Task.prototype.update_progress = function(tid, progress){
         let html = `<div class="progress-bar" role="progressbar" style="width: ${progress}%;" aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100"></div>`
         html = `<div class="progress ${tid}" style="height: ${height}px;position: absolute;top: ${top}px;left: 0px;right: 0px;z-index: -1; background-color: ${bg_color};">${html}</div>`
         $progress = $(html)
-        this.$content.find('table.task tbody').append($progress)
+        this.$content.find('table.active_tasks tbody').append($progress)
     }else{
         $progress.find('.progress-bar').attr('style', `width:${progress}%;`).attr('aria-valuenow', progress)
     }
@@ -201,7 +223,7 @@ Tab_Task.prototype.update_progress = function(tid, progress){
 
 
 Tab_Task.prototype.remove_progress = function(tid){
-    this.$content.find('table.task tbody>div.progress.'+tid).remove()
+    this.$content.find('table.active_tasks tbody>div.progress.'+tid).remove()
 }
 
 
@@ -229,13 +251,13 @@ Tab_Task.prototype.load_tasks = function(){
         data.sort(function(a, b){
             return a.id > b.id
         })
-        let $tbody = that.$content.find('table.task tbody')
+        let $tbody = that.$content.find('table.active_tasks tbody')
         $tbody.empty()
         let trs = ''
         let count = 0
         for(let task of data){
             count ++
-            $tbody.append(task_to_tr(task, count))
+            $tbody.append(active_task_to_tr(task, count))
         }
 
         function try_do(){
@@ -253,7 +275,34 @@ Tab_Task.prototype.load_tasks = function(){
     })
 }
 
-function task_to_tr(task, count=''){
+function task_to_tr(task){
+    let group = task.group
+    if(group == 'all'){
+        group = '全 部'
+    }
+    let tds = ''
+    let wds = ''
+    for (let [idx, day] of task['weekdays'].entries()) {
+        let cls = 'badge-secondary'
+        if (day) {
+            cls = 'badge-primary'
+        }
+        let days = ['一', '二', '三', '四', '五', '六', '日']
+        wds = `${wds}<span class="badge ${cls}">${days[idx]}</span>`
+    }
+    tds = `${tds}<td>${wds}</td>`
+    tds = `${tds}<td>${task.interval}</td>`
+    tds = `${tds}<td>${task.start_date}</td>`
+    tds = `${tds}<td>${task.end_date}</td>`
+    tds = `${tds}<td>${group}</td>`
+    tds = `${tds}<td>${task.type}</td>`
+    let button = `<button type='button' class="btn btn-sm btn-dark remove"><i class="material-icons">delete</i></button>`
+    tds = `${tds}<td>${button}</td>`
+
+    return `<tr class="${task.id}" data-id="${task.id}">${tds}</tr>`
+}
+
+function active_task_to_tr(task, count=''){
     let group = task.group
     if(group == 'all'){
         group = '全 部'
@@ -287,8 +336,8 @@ function task_to_tr(task, count=''){
         cls.push('paused')
     }
 
-    let buttons = ""
-    let toggle_icon = ""
+    let buttons = "";
+    let toggle_icon = "";
     if(paused){
         toggle_icon = '<i class="material-icons">play_arrow</i>'
     }else{

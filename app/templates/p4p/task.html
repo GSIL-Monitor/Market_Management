@@ -36,7 +36,7 @@
             </select>
             <button type="button" class="btn btn-primary add_task">添 加</button>
         </div>
-        <div class="input-group ml-auto mr-auto mb-3">
+        <div class="input-group weekdays_selection ml-auto mr-auto mb-3">
             <div class="btn-group btn-group-toggle" data-toggle="buttons">
                 <label class="btn btn-secondary active">
                     <input type="checkbox" checked autocomplete="off">一
@@ -63,7 +63,24 @@
             <button type="button" class="btn btn-primary save_task">保 存</button>
         </div>
 
-        <table class="table table-sm table-striped table-hover ml-auto mr-auto task">
+        <table class="table table-sm table-striped table-hover ml-auto mr-auto tasks_overview">
+            <thead class="thead-dark">
+                <tr>
+                    <th scope="col">weekdays</th>
+                    <th scope="col">间 隔</th>
+                    <th scope="col">开 始</th>
+                    <th scope="col">结 束</th>
+                    <th scope="col">分 组</th>
+                    <th scope="col">类 型</th>
+                    <th scope="col"></th>
+                </tr>
+            </thead>
+            <tbody>
+
+            </tbody>
+        </table>
+
+        <table class="table table-sm table-striped table-hover ml-auto mr-auto active_tasks">
             <thead class="thead-dark">
                 <tr>
                     <th scope="col">序 列</th>

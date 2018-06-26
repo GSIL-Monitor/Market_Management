@@ -50,16 +50,24 @@ class P4P():
         fh.setFormatter(formatter)
         self.logger.addHandler(fh)
 
+        self.lid = lid
+        self.lpwd = lpwd
+        self.socketio = socketio
+        self.namespace = namespace
+        self.room = room
+
         self.logger.info('initialize .... '+market['name'])
         self.market = market
         self.keywords_history = []
         self.load_keywords('recording')
         self.load_keywords('monitor')
 
-        self.logger.info('open browser and login')
-        alibaba = Alibaba(lid, lpwd, socketio, namespace, room)
-        alibaba.login()
-        self.browser = alibaba.browser
+        self.browser = None
+        # self.logger.info('open browser and login')
+        # alibaba = Alibaba(lid, lpwd, socketio, namespace, room)
+        # alibaba.login()
+        # self.browser = alibaba.browser
+
         self.lock = threading.RLock()
         self.recent_prices = {}
 
@@ -368,7 +376,7 @@ class P4P():
             except Exception as e:
                 traceback.print_exc()
                 time.sleep(3)
-                print('==================== retry in 3 seconds =================================')
+                print('====================== retry in 3 seconds =================================')
                 response = None
                 continue
 
@@ -463,6 +471,13 @@ class P4P():
         return {'top_sponsor': top_sponsor, 'sponsor_list': sponsor_list}
 
     def load_url(self):
+
+        if not self.browser:
+            self.logger.info('open browser and login')
+            alibaba = Alibaba(self.lid, self.lpwd, self.socketio, self.namespace, self.room)
+            alibaba.login()
+            self.browser = alibaba.browser
+
         self.browser.get(self.api)
         WebDriverWait(self.browser, 15).until(EC.invisibility_of_element_located((By.CSS_SELECTOR, 'div.bp-loading-panel')))
         # css_selector = "div.keyword-manage .bp-table-main-wraper>table tbody tr:first-child"
