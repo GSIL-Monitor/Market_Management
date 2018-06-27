@@ -121,6 +121,16 @@ div.task table.tasks_overview td button{
     margin-left:5px;
 }
 
+div.task table.tasks_overview td{
+    text-align: center;
+}
+div.task table.tasks_overview td.weekdays{
+    width: 260px;
+}
+div.task table.tasks_overview td.weekdays span.badge{
+    border-radius: 0px !important;
+    font-size: 1rem;
+}
 div.task label.active{
     background-color: #007bff !important;
 }

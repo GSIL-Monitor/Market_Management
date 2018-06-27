@@ -1,6 +1,6 @@
 import {Tab} from '../framework/tab.js'
 
-function Tab_Task(socket, market=undefined, categories=undefined, directory=undefined, filename=undefined){
+function Tab_Task(socket, market=undefined, categories=undefined, directory=undefined, filename='p4p_tasks.json'){
     Tab.call(this, socket, market, categories, directory, filename)
 
     this.name = 'task'
@@ -85,8 +85,25 @@ function Tab_Task(socket, market=undefined, categories=undefined, directory=unde
             }
         }
         task['weekdays'] = weekdays
+
+        that.tasks.push(task)
+        socket.emit('serialize', that.tasks, that.market, [], that.filename)
         that.$content.find('table.tasks_overview tbody').append(task_to_tr(task))
     });
+
+    this.$content.find('table.tasks_overview tbody').on('click', 'button.remove', function(){
+        let $tr = $(this).parents('tr')
+        let id = $tr.data('id')
+        console.log(id)
+        for(let [idx, t] of that.tasks.entries()){
+            if(id === t.id){
+                that.tasks.splice(idx, 1)
+                break
+            }
+        }
+        socket.emit('serialize', that.tasks, that.market, [], that.filename)
+        $tr.remove()
+    })
 
     this.$content.find('table.active_tasks').on('click', 'button.toggle_task', function(){
         let btn_name = $(this).text()
@@ -107,6 +124,22 @@ function Tab_Task(socket, market=undefined, categories=undefined, directory=unde
             that.$content.find('table.active_tasks tbody div.'+task_id).remove()
         })
     })
+
+    this.fetch_values_from_server()
+        .then(function(results){
+            console.log(results)
+            if(!results[0]){
+                that.tasks = []
+                return
+            }
+
+            that.tasks = results[0]
+            let trs = ''
+            for(let t of that.tasks){
+                trs = `${trs}${task_to_tr(t)}`
+            }
+            that.$content.find('table.tasks_overview tbody').html(trs)
+        }).catch(error => console.log(error))
 
     socket.on('event_task_added', function(task){
         if(task.market_name != market.name){
@@ -183,7 +216,11 @@ function Tab_Task(socket, market=undefined, categories=undefined, directory=unde
     })
 
     that.refresh()
+
+
 }
+
+Tab_Task.prototype = Tab.prototype
 
 Tab_Task.prototype.update_progress = function(tid, progress){
     let that = this
@@ -290,12 +327,12 @@ function task_to_tr(task){
         let days = ['一', '二', '三', '四', '五', '六', '日']
         wds = `${wds}<span class="badge ${cls}">${days[idx]}</span>`
     }
-    tds = `${tds}<td>${wds}</td>`
-    tds = `${tds}<td>${task.interval}</td>`
-    tds = `${tds}<td>${task.start_date}</td>`
-    tds = `${tds}<td>${task.end_date}</td>`
-    tds = `${tds}<td>${group}</td>`
-    tds = `${tds}<td>${task.type}</td>`
+    tds = `${tds}<td class="weekdays">${wds}</td>`
+    tds = `${tds}<td class="interval">${task.interval}</td>`
+    tds = `${tds}<td class="date">${task.start_date}</td>`
+    tds = `${tds}<td class="date">${task.end_date}</td>`
+    tds = `${tds}<td class="group">${group}</td>`
+    tds = `${tds}<td class="type">${task.type}</td>`
     let button = `<button type='button' class="btn btn-sm btn-dark remove"><i class="material-icons">delete</i></button>`
     tds = `${tds}<td>${button}</td>`
 

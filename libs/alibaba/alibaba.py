@@ -36,7 +36,8 @@ class Alibaba:
         self.namespace = namespace
         self.room = room
         self.browser = webdriver.Chrome(chrome_options=self.chrome_options)
-        self.browser.set_window_size(1920, 1200)
+        # self.browser.set_window_size(1920, 1200)
+        self.browser.maximize_window()
 
     def notify(self, typo, message):
         if self.socketio:

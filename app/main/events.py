@@ -46,6 +46,20 @@ def add_task(market, task):
         obj['is_running'] = False
         tasks.append(obj)
     elif task['type'] == 'monitor':
+        task_id = find_next_task_id(task_type='recording')
+        kwargs['tid'] = task_id
+        start_date = arrow.get(task['start_date'], 'YYYY-MM-DD HH:mm:ss')
+        start = start_date.shift(minutes=-3)
+        end_date = arrow.get(task['end_date'], 'YYYY-MM-DD HH:mm:ss')
+        end = end_date.shift(minutes=3)
+        job = scheduler._scheduler.add_job(p4p.crawl, id=task_id, trigger='interval', kwargs=kwargs, minutes=int(task['interval']), start_date=start.format('YYYY-MM-DD HH:mm:ss'), end_date=end.format('YYYY-MM-DD HH:mm:ss'))
+        all_tasks[task_id] = {'job': job, 'is_last_run': False, 'is_running': False}
+        # job.modify(next_run_time=datetime.now())
+        obj = Task(job).__dict__
+        obj['is_last_run'] = False
+        obj['is_running'] = False
+        tasks.append(obj)
+
         task_id = find_next_task_id(task_type='monitor')
         kwargs['tid'] = task_id
         job = scheduler._scheduler.add_job(p4p.monitor, id=task_id, trigger='interval', kwargs=kwargs, minutes=int(task['interval']), start_date=task['start_date'], end_date=task['end_date'])
@@ -59,7 +73,7 @@ def add_task(market, task):
         task_id = find_next_task_id(task_type='monitor')
         kwargs['tid'] = task_id
         run_date = arrow.get(task['end_date'], 'YYYY-MM-DD HH:mm:ss')
-        run_date = run_date.shift(minutes=1)
+        run_date = run_date.shift(minutes=2)
         job = scheduler._scheduler.add_job(p4p.turn_all_off, id=task_id, trigger='date', kwargs=kwargs, run_date=run_date.format('YYYY-MM-DD HH:mm:ss'))
         all_tasks[task_id] = {'job': job, 'is_last_run': False, 'is_running': False}
         obj = Task(job).__dict__
@@ -71,15 +85,24 @@ def add_task(market, task):
 
 def find_next_task_id(task_type='recording'):
     max_tid = 0
-    jobs = scheduler.get_jobs()
-    for job in jobs:
-        text = job.id
+    # jobs = scheduler.get_jobs()
+    for id in all_tasks:
+        text = id
         if task_type in text:
             tid = int(text.split('_')[1])
             if tid > max_tid:
                 max_tid = tid
     max_tid += 1
     return task_type + '_' + str(max_tid)
+
+
+def get_p4p(market, socketio, room):
+    if market['name'] in p4ps:
+        return p4ps[market['name']]
+    else:
+        p4p = P4P(market, market['lid'], market['lpwd'], socketio, '/markets', room)
+        p4ps[market['name']] = p4p
+        return p4p
 
 
 @socketio.on('pause_task', namespace='/markets')
@@ -499,12 +522,3 @@ def background_task_refresh_p4p_keywords(market, socketio, ns, room):
     p4p = get_p4p(market, socketio, room)
     keywords = p4p.crawl_keywords()
     socketio.emit('refresh_p4p_keywords_result', keywords, namespace=ns, room=room)
-
-
-def get_p4p(market, socketio, room):
-    if market['name'] in p4ps:
-        return p4ps[market['name']]
-    else:
-        p4p = P4P(market, market['lid'], market['lpwd'], socketio, '/markets', room)
-        p4ps[market['name']] = p4p
-        return p4p
