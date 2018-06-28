@@ -1,6 +1,7 @@
 import eventlet
 eventlet.monkey_patch()
 
+from libs.json import JSON
 from libs.alibaba.p4p import P4P
 from libs.task import Task
 from flask_apscheduler import APScheduler
@@ -34,7 +35,7 @@ socketio = SocketIO()
 scheduler = APScheduler()
 
 p4ps = {}
-tasks = {}
+active_tasks = {}
 
 logger = logging.getLogger('APP')
 logger.setLevel(logging.DEBUG)
@@ -66,6 +67,79 @@ def scheduler_listener(event):
         job = scheduler.get_job(event.job_id)
         if job:
             socketio.emit('event_task_executed', Task(job).__dict__, namespace='/markets', broadcast=True)
+
+
+def schedule_task(market, task, room=None):
+    tasks = []
+    p4p = get_p4p(market, socketio, room)
+    kwargs = {'group': task['group'], 'socketio': socketio, 'tasks': active_tasks}
+    if task['type'] == 'recording':
+        task_id = find_next_task_id(task_type='recording')
+        kwargs['tid'] = task_id
+        job = scheduler._scheduler.add_job(p4p.crawl, id=task_id, trigger='interval', kwargs=kwargs, minutes=int(task['interval']), start_date=task['start_date'], end_date=task['end_date'])
+        active_tasks[task_id] = {'job': job, 'is_last_run': False, 'is_running': False}
+        # job.modify(next_run_time=datetime.now())
+        obj = Task(job).__dict__
+        obj['is_last_run'] = False
+        obj['is_running'] = False
+        tasks.append(obj)
+    elif task['type'] == 'monitor':
+        task_id = find_next_task_id(task_type='recording')
+        kwargs['tid'] = task_id
+        start_date = arrow.get(task['start_date'], 'YYYY-MM-DD HH:mm:ss')
+        start = start_date.shift(minutes=-3)
+        end_date = arrow.get(task['end_date'], 'YYYY-MM-DD HH:mm:ss')
+        end = end_date.shift(minutes=3)
+        job = scheduler._scheduler.add_job(p4p.crawl, id=task_id, trigger='interval', kwargs=kwargs, minutes=int(task['interval']), start_date=start.format('YYYY-MM-DD HH:mm:ss'), end_date=end.format('YYYY-MM-DD HH:mm:ss'))
+        active_tasks[task_id] = {'job': job, 'is_last_run': False, 'is_running': False}
+        # job.modify(next_run_time=datetime.now())
+        obj = Task(job).__dict__
+        obj['is_last_run'] = False
+        obj['is_running'] = False
+        tasks.append(obj)
+
+        task_id = find_next_task_id(task_type='monitor')
+        kwargs['tid'] = task_id
+        job = scheduler._scheduler.add_job(p4p.monitor, id=task_id, trigger='interval', kwargs=kwargs, minutes=int(task['interval']), start_date=task['start_date'], end_date=task['end_date'])
+        active_tasks[task_id] = {'job': job, 'is_last_run': False, 'is_running': False}
+        # job.modify(next_run_time=datetime.now())
+        obj = Task(job).__dict__
+        obj['is_last_run'] = False
+        obj['is_running'] = False
+        tasks.append(obj)
+
+        task_id = find_next_task_id(task_type='monitor')
+        kwargs['tid'] = task_id
+        run_date = arrow.get(task['end_date'], 'YYYY-MM-DD HH:mm:ss')
+        run_date = run_date.shift(minutes=2)
+        job = scheduler._scheduler.add_job(p4p.turn_all_off, id=task_id, trigger='date', kwargs=kwargs, run_date=run_date.format('YYYY-MM-DD HH:mm:ss'))
+        active_tasks[task_id] = {'job': job, 'is_last_run': False, 'is_running': False}
+        obj = Task(job).__dict__
+        obj['is_last_run'] = False
+        obj['is_running'] = False
+        tasks.append(obj)
+
+
+def find_next_task_id(task_type='recording'):
+    max_tid = 0
+    # jobs = scheduler.get_jobs()
+    for id in active_tasks:
+        text = id
+        if task_type in text:
+            tid = int(text.split('_')[1])
+            if tid > max_tid:
+                max_tid = tid
+    max_tid += 1
+    return task_type + '_' + str(max_tid)
+
+
+def get_p4p(market, socketio, room=None):
+    if market['name'] in p4ps:
+        return p4ps[market['name']]
+    else:
+        p4p = P4P(market, market['lid'], market['lpwd'], socketio, '/markets', room)
+        p4ps[market['name']] = p4p
+        return p4p
 
 
 def create_app(debug=True):
@@ -122,6 +196,27 @@ def create_app(debug=True):
 
     data.alibaba = None
     app.data = data
+
+    markets = JSON.deserialize('.', 'storage', 'markets.json')
+    for name in markets:
+        now = arrow.now()
+        weekday = now.weekday()
+        market = markets[name]
+        p4p_tasks = JSON.deserialize(market['directory']+"_config", '', 'p4p_tasks.json')
+        for task in p4p_tasks:
+            if task['weekdays'][weekday]:
+                t = {}
+                t['interval'] = task['interval']
+                t['group'] = task['group']
+                t['type'] = task['type']
+                start_date = arrow.get(now.format('YYYY-MM-DD') + ' ' + task['start_date'], 'YYYY-MM-DD HH:mm:ss')
+                end_date = arrow.get(now.format('YYYY-MM-DD') + ' ' + task['end_date'], 'YYYY-MM-DD HH:mm:ss')
+                if end_date < start_date:
+                    end_date = end_date.shift(days=1)
+                t['start_date'] = start_date.format('YYYY-MM-DD HH:mm:ss')
+                t['end_date'] = end_date.format('YYYY-MM-DD HH:mm:ss')
+                schedule_task(market, t)
+
     logger.info("app is now ready for accessing")
     return app
 

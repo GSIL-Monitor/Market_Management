@@ -85,6 +85,7 @@ function Tab_Task(socket, market=undefined, categories=undefined, directory=unde
             }
         }
         task['weekdays'] = weekdays
+        task['market'] = that.market.name
 
         that.tasks.push(task)
         socket.emit('serialize', that.tasks, that.market, [], that.filename)

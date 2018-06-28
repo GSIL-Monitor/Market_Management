@@ -22,7 +22,7 @@ class Alibaba:
     api_product_manage = 'https://hz-productposting.alibaba.com/product/products_manage.htm'
 
     chrome_options = webdriver.ChromeOptions()
-    # chrome_options.add_argument('--headless')
+    chrome_options.add_argument('--headless')
     chrome_options.add_argument('--disable-gpu')
     chrome_options.add_argument('--disable-extensions')
     chrome_options.add_argument('--disable-logging')
