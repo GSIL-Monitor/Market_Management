@@ -25,6 +25,11 @@ from selenium import webdriver
 import traceback
 import threading
 import arrow
+import time
+
+from pywinauto.application import Application
+from pywinauto.win32functions import SetForegroundWindow
+import pyautogui
 
 import logging
 from logging.handlers import TimedRotatingFileHandler
@@ -60,8 +65,8 @@ def scheduler_listener(event):
         job = scheduler.get_job(event.job_id)
         socketio.emit('event_task_added', Task(job).__dict__, namespace='/markets', broadcast=True)
     elif event.code == EVENT_JOB_REMOVED:
-        if event.job_id in tasks:
-            tasks[event.job_id]['is_last_run'] = True
+        if event.job_id in active_tasks:
+            active_tasks[event.job_id]['is_last_run'] = True
         socketio.emit('event_task_removed', event.job_id, namespace='/markets', broadcast=True)
     elif event.code == EVENT_JOB_EXECUTED:
         job = scheduler.get_job(event.job_id)
@@ -69,7 +74,7 @@ def scheduler_listener(event):
             socketio.emit('event_task_executed', Task(job).__dict__, namespace='/markets', broadcast=True)
 
 
-def schedule_task(market, task, room=None):
+def schedule_task(market, task, room=None, power_off=False):
     tasks = []
     p4p = get_p4p(market, socketio, room)
     kwargs = {'group': task['group'], 'socketio': socketio, 'tasks': active_tasks}
@@ -89,8 +94,8 @@ def schedule_task(market, task, room=None):
         start_date = arrow.get(task['start_date'], 'YYYY-MM-DD HH:mm:ss')
         start = start_date.shift(minutes=-3)
         end_date = arrow.get(task['end_date'], 'YYYY-MM-DD HH:mm:ss')
-        end = end_date.shift(minutes=3)
-        job = scheduler._scheduler.add_job(p4p.crawl, id=task_id, trigger='interval', kwargs=kwargs, minutes=int(task['interval']), start_date=start.format('YYYY-MM-DD HH:mm:ss'), end_date=end.format('YYYY-MM-DD HH:mm:ss'))
+        end = end_date.shift(minutes=5)
+        job = scheduler._scheduler.add_job(p4p.crawl, id=task_id, trigger='interval', kwargs=kwargs, minutes=5, start_date=start.format('YYYY-MM-DD HH:mm:ss'), end_date=end.format('YYYY-MM-DD HH:mm:ss'))
         active_tasks[task_id] = {'job': job, 'is_last_run': False, 'is_running': False}
         # job.modify(next_run_time=datetime.now())
         obj = Task(job).__dict__
@@ -119,6 +124,19 @@ def schedule_task(market, task, room=None):
         obj['is_running'] = False
         tasks.append(obj)
 
+    if power_off:
+        task_id = 'power_off'
+        off_date = arrow.get(task['end_date'], 'YYYY-MM-DD HH:mm:ss')
+        off_date = off_date.shift(minutes=8)
+        job = scheduler._scheduler.add_job(shutdown, id=task_id, trigger='date', run_date=off_date.format('YYYY-MM-DD HH:mm:ss'))
+        active_tasks[task_id] = {'job': job, 'is_last_run': False, 'is_running': False}
+        obj = Task(job).__dict__
+        obj['is_last_run'] = False
+        obj['is_running'] = False
+        tasks.append(obj)
+
+    return tasks
+
 
 def find_next_task_id(task_type='recording'):
     max_tid = 0
@@ -140,6 +158,28 @@ def get_p4p(market, socketio, room=None):
         p4p = P4P(market, market['lid'], market['lpwd'], socketio, '/markets', room)
         p4ps[market['name']] = p4p
         return p4p
+
+
+def shutdown():
+    os.system('shutdown -s')
+
+
+def run_ali_workbench(market):
+    app = Application(backend="uia").start('C:\Program Files (x86)\AliWorkbench\AliWorkbench.exe --force-renderer-accessibility')
+
+    left = app.dialog.rectangle().left
+    top= app.dialog.rectangle().top
+    SetForegroundWindow(app.top_window().wrapper_object())
+    x = left+434
+    y = top+228
+    pyautogui.moveTo(x,y)
+    pyautogui.click()
+    pyautogui.keyDown('ctrl')
+    pyautogui.press('a')
+    pyautogui.keyUp('ctrl')
+    pyautogui.typewrite(market['lid'])
+    pyautogui.press('enter')
+    pyautogui.press('enter')
 
 
 def create_app(debug=True):
@@ -198,11 +238,17 @@ def create_app(debug=True):
     app.data = data
 
     markets = JSON.deserialize('.', 'storage', 'markets.json')
+    count = 0
     for name in markets:
+        if count != 0:
+            time.sleep(30)
         now = arrow.now()
         weekday = now.weekday()
         market = markets[name]
+        run_ali_workbench(market)
         p4p_tasks = JSON.deserialize(market['directory']+"_config", '', 'p4p_tasks.json')
+        if not p4p_tasks:
+            p4p_tasks = []
         for task in p4p_tasks:
             if task['weekdays'][weekday]:
                 t = {}
@@ -215,7 +261,9 @@ def create_app(debug=True):
                     end_date = end_date.shift(days=1)
                 t['start_date'] = start_date.format('YYYY-MM-DD HH:mm:ss')
                 t['end_date'] = end_date.format('YYYY-MM-DD HH:mm:ss')
-                schedule_task(market, t)
+                schedule_task(market, t, power_off=True)
+
+        count += 1
 
     logger.info("app is now ready for accessing")
     return app

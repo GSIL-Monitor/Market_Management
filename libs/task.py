@@ -7,7 +7,8 @@ class Task():
     def __init__(self, job):
         self.id = job.id
         self.name = job.name
-        self.market_name = job.func.__self__.market['name']
+        if self.name != 'shutdown':
+            self.market_name = job.func.__self__.market['name']
         
         if job.name == 'P4P.crawl':
             self.type = '记 录'
@@ -15,6 +16,8 @@ class Task():
             self.type = '监 控'
         elif job.name == 'P4P.turn_all_off':
             self.type = '关闭监控'
+        elif job.name == 'shutdown':
+            self.type = "关机"
 
         if job.kwargs and 'group' in job.kwargs:
             self.group = job.kwargs['group']

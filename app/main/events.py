@@ -150,7 +150,8 @@ def get_all_tasks(market):
         t = all_tasks[tid]
         job = t['job']
 
-        mkt = job.func.__self__.market
+        if hasattr(job.func, '__self__'):
+            mkt = job.func.__self__.market
 
         if mkt['name'] != market['name']:
             continue
