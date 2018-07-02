@@ -474,7 +474,7 @@ class P4P():
 
         if not self.browser:
             self.logger.info('open browser and login')
-            alibaba = Alibaba(self.lid, self.lpwd, self.socketio, self.namespace, self.room)
+            alibaba = Alibaba(self.lid, self.lpwd, None, None, None)
             alibaba.login()
             self.browser = alibaba.browser
 

@@ -24,10 +24,12 @@ class Alibaba:
     chrome_options = webdriver.ChromeOptions()
     chrome_options.add_argument('--headless')
     chrome_options.add_argument('--disable-gpu')
+    chrome_options.add_argument('--disable-software-rasterizer')
     chrome_options.add_argument('--disable-extensions')
     chrome_options.add_argument('--disable-logging')
     chrome_options.add_argument('--disable-infobars')
     chrome_options.add_argument('--ignore-certificate-errors')
+
 
     def __init__(self, user, password, socketio=None, namespace=None, room=None):
         self.user = user

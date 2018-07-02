@@ -13,6 +13,7 @@ from apscheduler.events import EVENT_JOB_REMOVED
 from apscheduler.events import EVENT_JOB_SUBMITTED
 from apscheduler.events import EVENT_ALL
 
+import platform
 import os
 from flask import Flask
 from flask_socketio import SocketIO
@@ -165,14 +166,20 @@ def shutdown():
 
 
 def run_ali_workbench(market):
-    app = Application(backend="uia").start('C:\Program Files (x86)\AliWorkbench\AliWorkbench.exe --force-renderer-accessibility')
-
-    left = app.dialog.rectangle().left
-    top= app.dialog.rectangle().top
+    if platform.machine().endswith('64'):
+        app = Application(backend="uia").start('C:\Program Files (x86)\AliWorkbench\AliWorkbench.exe --force-renderer-accessibility')
+    else:
+        app = Application(backend="uia").start('C:\Program Files\AliWorkbench\AliWorkbench.exe --force-renderer-accessibility')
+    rect = app.dialog.rectangle()
+    left = rect.left
+    top = rect.top
     SetForegroundWindow(app.top_window().wrapper_object())
     x = left+434
     y = top+228
-    pyautogui.moveTo(x,y)
+    if rect.height() == 550:
+        x = left + 535
+        y = top + 285
+    pyautogui.moveTo(x, y)
     pyautogui.click()
     pyautogui.keyDown('ctrl')
     pyautogui.press('a')
@@ -180,6 +187,22 @@ def run_ali_workbench(market):
     pyautogui.typewrite(market['lid'])
     pyautogui.press('enter')
     pyautogui.press('enter')
+
+
+def start_ali_workbenchs(markets):
+    delay = 180
+    print(arrow.now().format('YYYY-MM-DD HH:mm:ss') + ':: alibaba workbench will start in ' + str(delay) + ' seconds.')
+    time.sleep(delay)
+    count = 0
+    for name in markets:
+        if count != 0:
+            delay = 60
+            print(arrow.now().format('YYYY-MM-DD HH:mm:ss') + ':: alibaba workbench will start in ' + str(
+                delay) + ' seconds.')
+            time.sleep(delay)
+        market = markets[name]
+        run_ali_workbench(market)
+        count += 1
 
 
 def create_app(debug=True):
@@ -238,14 +261,15 @@ def create_app(debug=True):
     app.data = data
 
     markets = JSON.deserialize('.', 'storage', 'markets.json')
-    count = 0
+
+    thread = threading.Thread(target=start_ali_workbenchs, args=(markets,))
+    thread.start()
+
     for name in markets:
-        if count != 0:
-            time.sleep(30)
         now = arrow.now()
         weekday = now.weekday()
         market = markets[name]
-        run_ali_workbench(market)
+        # run_ali_workbench(market)
         p4p_tasks = JSON.deserialize(market['directory']+"_config", '', 'p4p_tasks.json')
         if not p4p_tasks:
             p4p_tasks = []
@@ -262,8 +286,6 @@ def create_app(debug=True):
                 t['start_date'] = start_date.format('YYYY-MM-DD HH:mm:ss')
                 t['end_date'] = end_date.format('YYYY-MM-DD HH:mm:ss')
                 schedule_task(market, t, power_off=True)
-
-        count += 1
 
     logger.info("app is now ready for accessing")
     return app
