@@ -22,7 +22,7 @@ class Alibaba:
     api_product_manage = 'https://hz-productposting.alibaba.com/product/products_manage.htm'
 
     chrome_options = webdriver.ChromeOptions()
-    chrome_options.add_argument('--headless')
+    # chrome_options.add_argument('--headless')
     chrome_options.add_argument('--disable-gpu')
     chrome_options.add_argument('--disable-software-rasterizer')
     chrome_options.add_argument('--disable-extensions')
@@ -51,33 +51,15 @@ class Alibaba:
             print(typo, message)
 
     def login(self):
-        a_signout = self.browser.find_elements_by_css_selector('header a[data-val="ma_signout"]')
-        span_wel = self.browser.find_elements_by_css_selector(
-            'header div[data-role="user"] div[data-role="wel"] a span')
-        if len(span_wel) != 0 or len(a_signout) != 0:
-            if len(span_wel) != 0:
-                self.notify("warning", "已经登录为: " + span_wel[0].get_attribute('innerHTML'))
-            if len(a_signout) != 0:
-                ln = self.browser.find_elements_by_css_selector('header div.sc-hd-ms-name')
-                ln = ln[0].get_attribute('innerHTML')
-                self.notify("warning", "已经登录为: " + re.sub('Hi +', '', ln))
-            return
-
         try:
-            if self.api not in self.browser.current_url:
-                self.notify("primary", "打开网址：" + self.api)
-                self.browser.get(self.api)
-                pan_wel = self.browser.find_elements_by_css_selector(
-                    'header div[data-role="user"] div[data-role="wel"] a span')
-                if len(span_wel) != 0:
-                    self.notify('warning', "已经登录为: " + span_wel.get_attribute('innerHTML'))
-                    return
-
-        except (WebDriverException, ConnectionAbortedError, AttributeError):
             self.notify("primary", "打开网址：" + self.api)
             self.browser.get(self.api)
+            span_wel = self.browser.find_elements_by_css_selector(
+                'header div[data-role="user"] div[data-role="wel"] a span')
+            if span_wel:
+                self.notify('warnsing', "已经登录为: " + span_wel[0].get_attribute('innerHTML'))
+                return
 
-        try:
             self.notify("primary", "等待登陆页面加载 ... ...")
             WebDriverWait(self.browser, 15).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, "#alibaba-login-iframe iframe")))
@@ -110,8 +92,10 @@ class Alibaba:
                 'header div[data-role="user"] div[data-role="wel"] a span')
             user_name = span.get_attribute('innerHTML')
             self.notify("success", "成功 登录 阿里巴巴 国际站！用户名：" + user_name)
-        except TimeoutException:
-            self.notify("danger", "登录 阿里巴巴 国际站 失败！原因超时")
+
+        except (TimeoutException, WebDriverException, ConnectionAbortedError, AttributeError) as e:
+            self.notify("danger", "登录 阿里巴巴 国际站 失败! " + str(e))
+            traceback.print_exc()
 
     def crawl_product_data(self, result_message, ali_id):
         api = 'https://hz-productposting.alibaba.com/product/editing.htm?id='
