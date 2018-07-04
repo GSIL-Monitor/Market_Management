@@ -73,7 +73,10 @@ class Inquiry:
             item['url'] = div.find('a').attr('href')
             text = div.find('div.spec-inquiry-id').text().strip()
             item['id'] = re.sub('询价单号：', '', text)
-            item['date'] = div.find('div.spec-inquiry-id~div').text().strip()
+            item['date'] = div.find('div.spec-inquiry-id+div').text().strip()
+            item['tags'] = []
+            for span in div.find('div.aui-tags span'):
+                item['tags'].append(pq(span).text())
             item['is_replied'] = True if div.find('td:nth-child(2) i[title="已回复"]') else False
             item['title'] = div.find('td:nth-child(3)').text()
             item['buyer'] = div.find('td:nth-child(4)').text().strip()
@@ -89,4 +92,40 @@ class Inquiry:
             item['status'] = div.find('td:nth-child(8)').text()
             item['status'] = div.find('td:nth-child(8)').text()
             inquiries.append(item)
+
         return inquiries
+
+    def get_conversation(self):
+        html = pq(self.browser.page_source)
+        divs = html.find('div.main-content-chat div.item-content-wrap')
+        messages = []
+        for elem  in divs:
+            div = pq(elem)
+            if div.hasClass('notification'):
+                continue
+            div = div.find('div.item-content')
+            msg = {}
+            if div.hasClass('item-content-left'):
+                msg['position'] = 'left'
+            elif div.hasClass('item-content-right'):
+                msg['position'] = 'right'
+            msg['user'] = div.find('.item-base-info span.name').text()
+            msg['date'] = div.find('.item-base-info span:last-child').text()
+            msg['content'] = div.find('.session-rich-content').text()
+            messages.append(msg)
+        buyer = {}
+        email = html.find('div.main-content-sidebar div.contact-item:nth-child(2) span.contact-item-email').text()
+        buyer['email'] = email
+        buyer['name'] = html.find('div.main-content-sidebar div.contact-name').text()
+        return { 'messages': messages, 'buyer': buyer}
+
+    def open_inquiry_in_new_tab(self, inquiry):
+        href = self.browser.find_element_by_css_selector('a[data-trade-id="' + inquiry['id'] + '"]').get_attribute(
+            'href')
+        self.browser.execute_script("window.open('');")
+        self.browser.switch_to.window(self.browser.window_handles[1])
+        self.browser.get(href)
+
+    def close_inquiry_and_switch_back(self):
+        self.browser.close()
+        self.browser.switch_to_window(self.browser.window_handles[0])
