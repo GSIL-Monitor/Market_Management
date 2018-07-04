@@ -59,7 +59,8 @@ class Inquiry:
 
     def load_url(self):
         self.browser.get(self.api)
-        div = self.browser.find_element_by_css_selector('div.aui-loading')
+        div = WebDriverWait(self.browser, 15).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, 'div.aui-loading')))
         WebDriverWait(self.browser, 15).until(EC.staleness_of(div))
 
     def get_inquiries(self):
