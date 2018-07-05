@@ -262,6 +262,15 @@ def remove_market(market):
         return False
 
 
+@socketio.on('get_p4p_records', namespace='/markets')
+def get_p4p_records(market, paths, date_str):
+    fn_keywords = 'p4p_keywords_crawl_result_' + date_str + '.json.gz'
+    fn_balance = 'p4p_balance_change_history_'+date_str+'.json.gz'
+    keywords = deserialize(market, paths, fn_keywords, True)
+    balance = deserialize(market, paths, fn_balance, True)
+    return [keywords, balance]
+
+
 @socketio.on('serialize', namespace='/markets')
 def serialize(obj, market, paths, filename):
     root = market['directory']+'_config'

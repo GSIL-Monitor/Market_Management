@@ -12,6 +12,7 @@ from selenium.common.exceptions import StaleElementReferenceException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.action_chains import ActionChains
 
+import arrow
 from datetime import datetime
 from bs4 import BeautifulSoup
 from pyquery import PyQuery as pq
@@ -71,6 +72,7 @@ class P4P():
         self.lock = threading.RLock()
         self.recent_prices = {}
 
+        self.balance = None
 
     def load_keywords(self, tp):
         if not tp:
@@ -411,64 +413,64 @@ class P4P():
 
         return {'top_sponsor': top_sponsor, 'sponsor_list': sponsor_list}
 
-    def find_sponsors_backup(self, kws):
-        with self.lock:
-            url = 'https://www.alibaba.com/trade/search?fsb=y&IndexArea=product_en&viewtype=L&CatId=&SearchText='+re.sub(' +', '+', kws)
-
-            if len(self.browser.window_handles) == 1:
-                self.browser.execute_script("window.open()")
-            self.browser.switch_to_window(self.browser.window_handles[1])
-
-            top_sponsor = None
-            sponsor_list = []
-
-            try:
-                self.browser.get(url)
-                css_selector = "div.m-product-item .item-extra, div.m-product-item .brand-right-container"
-                WebDriverWait(self.browser, 15).until(EC.presence_of_element_located((By.CSS_SELECTOR, css_selector)))
-                
-                html = self.browser.page_source
-                soup = BeautifulSoup(html, 'html.parser')
-
-                divs = soup.find_all('div', class_='m-product-item')
-                for idx,div in enumerate(divs):
-                    # print(kws, idx)
-                    company = {}
-                    extra = div.find(class_='item-extra')
-                    if extra:
-                        a = extra.find('div', class_='stitle').a
-                        company['years'] = re.search('year-num(\d+)', str(a.i)).group(1)
-                        a = a.next_sibling.next_sibling
-                        company['name'] = a.string.strip()
-                        company['url'] = 'https:' + a['href']
-                        ul = extra.find('ul', class_='record')
-                    else:
-                        container = div.find('div', class_='brand-right-container')
-                        text = str(container.find('i', class_='year-num'))
-                        company['years'] = re.search('year-num(\d+)', text).group(1)
-                        a = container.find('div', class_='supplier').a
-                        company['name'] = a.string.strip()
-                        company['url'] = 'https:' + a['href']
-                        ul = container.find('ul', class_='record-container')
-
-                    if ul:
-                        company['record'] = [re.sub('\n', '', x).strip() for x in ul.findAll(text=True) if x != '\n']
-
-                    if div.find('span', class_='sking'):
-                        top_sponsor = company
-                    elif div.find('span', class_='sl'):
-                        sponsor_list.append(company)
-                    else:
-                        break
-
-            except Exception as e:
-                print('Error: ', e)
-                traceback.print_exc()
-            finally:
-                # self.browser.execute_script("window.close()")
-                self.browser.switch_to_window(self.browser.window_handles[0])
-
-        return {'top_sponsor': top_sponsor, 'sponsor_list': sponsor_list}
+    # def find_sponsors_backup(self, kws):
+    #     with self.lock:
+    #         url = 'https://www.alibaba.com/trade/search?fsb=y&IndexArea=product_en&viewtype=L&CatId=&SearchText='+re.sub(' +', '+', kws)
+    #
+    #         if len(self.browser.window_handles) == 1:
+    #             self.browser.execute_script("window.open()")
+    #         self.browser.switch_to_window(self.browser.window_handles[1])
+    #
+    #         top_sponsor = None
+    #         sponsor_list = []
+    #
+    #         try:
+    #             self.browser.get(url)
+    #             css_selector = "div.m-product-item .item-extra, div.m-product-item .brand-right-container"
+    #             WebDriverWait(self.browser, 15).until(EC.presence_of_element_located((By.CSS_SELECTOR, css_selector)))
+    #
+    #             html = self.browser.page_source
+    #             soup = BeautifulSoup(html, 'html.parser')
+    #
+    #             divs = soup.find_all('div', class_='m-product-item')
+    #             for idx,div in enumerate(divs):
+    #                 # print(kws, idx)
+    #                 company = {}
+    #                 extra = div.find(class_='item-extra')
+    #                 if extra:
+    #                     a = extra.find('div', class_='stitle').a
+    #                     company['years'] = re.search('year-num(\d+)', str(a.i)).group(1)
+    #                     a = a.next_sibling.next_sibling
+    #                     company['name'] = a.string.strip()
+    #                     company['url'] = 'https:' + a['href']
+    #                     ul = extra.find('ul', class_='record')
+    #                 else:
+    #                     container = div.find('div', class_='brand-right-container')
+    #                     text = str(container.find('i', class_='year-num'))
+    #                     company['years'] = re.search('year-num(\d+)', text).group(1)
+    #                     a = container.find('div', class_='supplier').a
+    #                     company['name'] = a.string.strip()
+    #                     company['url'] = 'https:' + a['href']
+    #                     ul = container.find('ul', class_='record-container')
+    #
+    #                 if ul:
+    #                     company['record'] = [re.sub('\n', '', x).strip() for x in ul.findAll(text=True) if x != '\n']
+    #
+    #                 if div.find('span', class_='sking'):
+    #                     top_sponsor = company
+    #                 elif div.find('span', class_='sl'):
+    #                     sponsor_list.append(company)
+    #                 else:
+    #                     break
+    #
+    #         except Exception as e:
+    #             print('Error: ', e)
+    #             traceback.print_exc()
+    #         finally:
+    #             # self.browser.execute_script("window.close()")
+    #             self.browser.switch_to_window(self.browser.window_handles[0])
+    #
+    #     return {'top_sponsor': top_sponsor, 'sponsor_list': sponsor_list}
 
     def load_url(self):
 
@@ -543,6 +545,8 @@ class P4P():
                     prices.append(price)
 
                 print(prices, end=">")
+
+                self.check_balance()
                 break
             except StaleElementReferenceException:
                 self.browser.implicitly_wait(0.5)
@@ -552,6 +556,21 @@ class P4P():
                 break
         webdriver.ActionChains(self.browser).send_keys(Keys.ESCAPE).perform()
         return prices
+
+    def check_balance(self):
+        balance = self.browser.find_element_by_css_selector(
+            '.sc-manage-edit-price-dialog span[data-role="span-balance"]').text
+        if self.balance is None:
+            self.balance = balance
+        elif self.balance != balance:
+            diff = format(float(self.balance) - float(balance), '.2f')
+            self.balance = balance
+
+            time_str = arrow.now().format('YYYY-MM-DD HH:mm:ss')
+            date_str = time_str.split(' ')[0]
+            root = self.market['directory'] + '_config'
+            fn = 'p4p_balance_change_history_'+date_str+'.json.gz'
+            JSON.serialize([time_str, diff], root, [], fn, append=True)
 
     def next_page(self):
         success = True

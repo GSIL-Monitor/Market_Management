@@ -11,6 +11,7 @@ function Tab_Chart(socket, market=undefined, categories=undefined, directory=und
 
     this.keywords = undefined
     this.sponsors = undefined
+    this.balance = []
 
     let buttons = `<select class="custom-select" id="crawling_results"></select>`
     buttons = `${buttons}<button type="button" class="btn btn-sm btn-primary ok" style="margin-left:0px;">OK</button>`
@@ -37,13 +38,19 @@ function Tab_Chart(socket, market=undefined, categories=undefined, directory=und
         let dt = $('#crawling_results').val()
         let fn = 'p4p_keywords_crawl_result_'+dt+'.json.gz'
 
-        socket.emit('deserialize', market, [], fn, true, function(data){
-            console.log(data)
+        socket.emit('get_p4p_records', market, [], dt, function(data){
+            console.log(data[0])
+            console.log(data[1])
 
             let keywords = {}
             let sponsors = {}
+            that.balance = []
 
-            for(let turn of data){
+            for(let arr of data[1]){
+                that.balance.push([moment(arr[0]), arr[1]])
+            }
+
+            for(let turn of data[0]){
                 for(let item of turn){
                     let id = item[1]
                     // if(id == '77942874814'){
@@ -110,7 +117,7 @@ function Tab_Chart(socket, market=undefined, categories=undefined, directory=und
             that.keywords = keywords
             that.sponsors = sponsors
 
-            console.log(that.keywords, that.sponsors)
+            console.log(that.keywords, that.sponsors, that.balance)
             that.load_keywords()
             that.load_sponsors()
             that.$content.on('click', 'tr a', function(e){
@@ -245,6 +252,11 @@ Tab_Chart.prototype.load_keyword_chart = function(kw){
 }
 
 Tab_Chart.prototype.load_sponsor_chart = function(sponsor){
+    if(sponsor.name.includes('Qingdao Glitter')){
+        if (!('balance' in sponsor)){
+            sponsor['balance'] = this.balance
+        }
+    }
     this.chart = new Sponsor_Chart(this.$svg_container, sponsor)
 }
 

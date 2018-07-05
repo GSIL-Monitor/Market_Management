@@ -140,7 +140,7 @@ Sponsor_Chart.prototype.load_yAxis = function(){
 
             symbols[key] = {}
             symbols[key]['symbol'] = d3.symbol().type(d3.symbols[symbol_idx]).size(32)()
-            symbols[key]['color'] = d3.schemeCategory10 [color_idx]
+            symbols[key]['color'] = d3.schemeCategory10[color_idx]
 
             d3.select('.chart table.keywords tbody tr[data-id="'+key+'"] svg path')
                 .attr('class', 'symbol')
@@ -170,6 +170,22 @@ Sponsor_Chart.prototype.load_yAxis = function(){
                 dts[dt_key] = []
                 dts[dt_key].push([key, price])
                 dt_list.push(dt)
+            }
+        }
+    }
+    if('balance' in this.sponsor){
+        for(let item of this.sponsor.balance){
+            let [dt, price] = item
+
+            if(max<price) {
+                maxs.push(price)
+                if(maxs.length > 5){
+                    maxs.shift()
+                }
+                max = price
+            }
+            if(min>price && price != 0){
+                min = price
             }
         }
     }
@@ -251,6 +267,21 @@ Sponsor_Chart.prototype.load_prices = function(){
                     }
                   });
 
+        this.symbols_list.push(gs)
+    }
+
+    if('balance' in this.sponsor){
+        let g = this.svg.append('g').attr('class', `symbol balance_changes`)
+        let gs = g.selectAll('g').data(this.sponsor.balance)
+                  .enter().append('path')
+                  .attr('class', 'balance symbol')
+                  .attr('d', d3.symbol().type(d3.symbols[1]).size(64)())
+                  .attr('fill', '#ff0000')
+                  .attr('stroke', '#ff0000')
+                  .attr('stroke-width',0)
+                  .attr('transform', function(d,j){
+                        return `translate(${that.xScale(d[0])},${that.yScale(d[1])}) rotate(-45)`;
+                  });
         this.symbols_list.push(gs)
     }
 }
@@ -336,13 +367,19 @@ Sponsor_Chart.prototype.zoom = function(){
                 .curve(d3.curveMonotoneX) // apply smoothing to the line
 
         for(let symbols of chart.symbols_list){
-            symbols.attr('transform', function(d){
-                if(d[1] == 0){
-                    return `translate(${chart.new_xScale(d[0])},${chart.yRange[1]})`; 
-                }else{
-                    return `translate(${chart.new_xScale(d[0])},${chart.yScale(d[1])})`; 
-                }
-            });
+            if(symbols.classed('balance')){
+                symbols.attr('transform', function(d){
+                    return `translate(${chart.new_xScale(d[0])},${chart.yScale(d[1])}) rotate(-45)`; 
+                });
+            }else{
+                symbols.attr('transform', function(d){
+                    if(d[1] == 0){
+                        return `translate(${chart.new_xScale(d[0])},${chart.yRange[1]})`; 
+                    }else{
+                        return `translate(${chart.new_xScale(d[0])},${chart.yScale(d[1])})`; 
+                    }
+                });
+            }
         }
 
         chart.svg.selectAll('.price_line path').each(function(){
