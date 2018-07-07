@@ -90,9 +90,11 @@ class Inquiry:
                 item['buyer_local_time'] = None
             item['responsible_person'] = div.find('td:nth-child(7)').text()
             item['status'] = div.find('td:nth-child(8)').text()
-            item['status'] = div.find('td:nth-child(8)').text()
+            if '新询盘' in item['status']:
+                item['is_new'] = True
+            else:
+                item['is_new'] = False
             inquiries.append(item)
-
         return inquiries
 
     def get_conversation(self):
