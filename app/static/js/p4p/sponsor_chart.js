@@ -177,6 +177,7 @@ Sponsor_Chart.prototype.load_yAxis = function(){
         for(let item of this.sponsor.balance){
             let [dt, price] = item
 
+            price = Math.abs(price)
             if(max<price) {
                 maxs.push(price)
                 if(maxs.length > 5){
@@ -276,11 +277,11 @@ Sponsor_Chart.prototype.load_prices = function(){
                   .enter().append('path')
                   .attr('class', 'balance symbol')
                   .attr('d', d3.symbol().type(d3.symbols[1]).size(64)())
-                  .attr('fill', '#ff0000')
-                  .attr('stroke', '#ff0000')
+                  .attr('fill', (d,j) => parseFloat(d[1]) < 0 ? '#00ff00' : '#ff0000')
+                  .attr('stroke', (d,j) => parseFloat(d[1]) < 0 ? '#00ff00' : '#ff0000')
                   .attr('stroke-width',0)
                   .attr('transform', function(d,j){
-                        return `translate(${that.xScale(d[0])},${that.yScale(d[1])}) rotate(-45)`;
+                        return `translate(${that.xScale(d[0])},${that.yScale(Math.abs(parseFloat([1])))}) rotate(-45)`;
                   });
         this.symbols_list.push(gs)
     }
@@ -369,7 +370,7 @@ Sponsor_Chart.prototype.zoom = function(){
         for(let symbols of chart.symbols_list){
             if(symbols.classed('balance')){
                 symbols.attr('transform', function(d){
-                    return `translate(${chart.new_xScale(d[0])},${chart.yScale(d[1])}) rotate(-45)`; 
+                    return `translate(${chart.new_xScale(d[0])},${chart.yScale(Math.abs(parseFolat(d[1])))}) rotate(-45)`;
                 });
             }else{
                 symbols.attr('transform', function(d){
