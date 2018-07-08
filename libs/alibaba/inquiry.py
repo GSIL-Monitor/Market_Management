@@ -32,13 +32,16 @@ from logging.handlers import TimedRotatingFileHandler
 class Inquiry:
     api = 'https://message.alibaba.com/message/default.htm'
     browser = None
+    tracking_ids = None
 
     def __init__(self, market, socketio=None, namespace=None, room=None):
+        self.market = market
         self.lid = market['lid']
         self.lpwd = market['lpwd']
         self.socketio = socketio
         self.namespace = namespace
         self.room = room
+        self.load_tracking_ids()
 
     def notify(self, typo, message):
         if self.socketio:
@@ -131,3 +134,15 @@ class Inquiry:
     def close_inquiry_and_switch_back(self):
         self.browser.close()
         self.browser.switch_to_window(self.browser.window_handles[0])
+
+    def save_tracking_ids(self):
+        fn = 'inquiry_tracking_ids.json'
+        root = self.market['directory'] + '_config'
+        JSON.serialize(self.tracking_ids, root, [], fn)
+
+    def load_tracking_ids(self):
+        fn = 'inquiry_tracking_ids.json'
+        root = self.market['directory'] + '_config'
+        self.tracking_ids = JSON.deserialize(root, [], fn)
+        if self.tracking_ids is None:
+            self.tracking_ids = []
