@@ -708,7 +708,7 @@ class P4P():
                     css_selector = "div.keyword-manage .bp-table-main-wraper>table"
                     table = self.browser.find_element_by_css_selector(css_selector)
 
-                    trs =  table.find_elements_by_css_selector('tbody tr')
+                    trs = table.find_elements_by_css_selector('tbody tr')
 
                     selected = False
                     for tr in trs:
