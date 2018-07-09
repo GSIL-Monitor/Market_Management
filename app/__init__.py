@@ -184,8 +184,14 @@ def run_ali_workbench(market):
     pyautogui.keyDown('ctrl')
     pyautogui.press('a')
     pyautogui.keyUp('ctrl')
-    pyautogui.typewrite(market['lid'])
-    pyautogui.press('enter')
+    print(market['lid'])
+    pyautogui.typewrite(market['lid'], interval=0.02)
+    pyautogui.press('tab')
+    pyautogui.keyDown('ctrl')
+    pyautogui.press('a')
+    pyautogui.keyUp('ctrl')
+    pyautogui.press('delete')
+    pyautogui.typewrite(market['lpwd'], interval=0.02)
     pyautogui.press('enter')
 
 
