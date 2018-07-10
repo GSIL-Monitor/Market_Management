@@ -2,7 +2,7 @@
     width: 900px;
 }
 .markets table.accounts {
-    width: 300px;
+    width: 430px;
     margin-left:10px;
 }
 
@@ -22,6 +22,11 @@ table.markets tbody td:nth-child(3){
 
 table.markets tbody td:nth-child(4){
     width: 100px;
+}
+
+table.accounts tbody tr.disabled{
+    background-color: gray;
+    color:white;
 }
 
 div.markets div.row{

@@ -16,6 +16,7 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 from pyquery import PyQuery as pq
 
+import pendulum
 import json
 import requests
 import time
@@ -34,10 +35,12 @@ class Inquiry:
     browser = None
     tracking_ids = None
 
-    def __init__(self, market, socketio=None, namespace=None, room=None):
+    def __init__(self, market, account=None, socketio=None, namespace=None, room=None):
         self.market = market
-        self.lid = market['lid']
-        self.lpwd = market['lpwd']
+        self.account = account
+        self.lid = account['lid'] if account else market['lid']
+        self.lpwd = account['lpwd'] if account else market['lpwd']
+        self.lname = account['lname'] if account else market['lname']
         self.socketio = socketio
         self.namespace = namespace
         self.room = room
@@ -138,11 +141,18 @@ class Inquiry:
     def save_tracking_ids(self):
         fn = 'inquiry_tracking_ids.json'
         root = self.market['directory'] + '_config'
-        JSON.serialize(self.tracking_ids, root, [], fn)
+        tracking_ids = {}
+        for key in self.tracking_ids:
+            tracking_ids[key] = self.tracking_ids[key].to_atom_string()
+        JSON.serialize(tracking_ids, root, [], fn)
 
     def load_tracking_ids(self):
         fn = 'inquiry_tracking_ids.json'
         root = self.market['directory'] + '_config'
-        self.tracking_ids = JSON.deserialize(root, [], fn)
-        if self.tracking_ids is None:
-            self.tracking_ids = []
+        tracking_ids = JSON.deserialize(root, [], fn)
+        self.tracking_ids = {}
+        if tracking_ids is not None:
+            for key in tracking_ids:
+                d = pendulum.parse(tracking_ids[key])
+                if d.diff().in_hours()<=12:
+                    self.tracking_ids[key] = d
