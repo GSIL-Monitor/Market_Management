@@ -179,6 +179,7 @@ function Tab_Chart(socket, market=undefined, categories=undefined, directory=und
             that.chart.hide_cursor()
         }
     })
+
     $('body').on('keydown', function(e){
         console.log('keydown: ', e.which)
 

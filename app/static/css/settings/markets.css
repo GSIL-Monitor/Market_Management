@@ -1,13 +1,37 @@
-.markets table {
+.markets table.markets {
     width: 900px;
 }
-.markets tbody tr.selected{
+.markets table.accounts {
+    width: 300px;
+    margin-left:10px;
+}
+
+table.markets tbody tr.selected{
     background-color: lightgray !important;
 }
 
-.markets tbody td:first-child{
+table.markets tbody td:first-child{
     width: 180px;
 }
-.markets tbody td:nth-child(3){
+table.markets tbody td:nth-child(2){
+    min-width: 200px;
+}
+table.markets tbody td:nth-child(3){
+    min-width: 300px;
+}
+
+table.markets tbody td:nth-child(4){
     width: 100px;
+}
+
+div.markets div.row{
+    padding-left:50px;
+    padding-right:50px;
+}
+
+div.markets button.remove_account{
+    padding: 0px;
+    height: 26px;
+    width: 50px;
+    margin-left: 5px;
 }

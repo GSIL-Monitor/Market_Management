@@ -269,7 +269,7 @@ def create_app(debug=True):
     markets = JSON.deserialize('.', 'storage', 'markets.json')
 
     thread = threading.Thread(target=start_ali_workbenchs, args=(markets,))
-    thread.start()
+    # thread.start()
 
     for name in markets:
         now = arrow.now()
