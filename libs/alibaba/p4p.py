@@ -473,21 +473,34 @@ class P4P():
     #     return {'top_sponsor': top_sponsor, 'sponsor_list': sponsor_list}
 
     def load_url(self):
+        while True:
+            try:
+                if self.browser is None:
+                    self.logger.info('open browser and login')
+                    alibaba = Alibaba(self.lid, self.lpwd, None, None, None)
+                    alibaba.login()
+                    self.browser = alibaba.browser
 
-        if not self.browser:
-            self.logger.info('open browser and login')
-            alibaba = Alibaba(self.lid, self.lpwd, None, None, None)
-            alibaba.login()
-            self.browser = alibaba.browser
+                self.browser.get(self.api)
+                WebDriverWait(self.browser, 15).until(
+                    EC.invisibility_of_element_located((By.CSS_SELECTOR, 'div.bp-loading-panel')))
 
-        self.browser.get(self.api)
-        WebDriverWait(self.browser, 15).until(EC.invisibility_of_element_located((By.CSS_SELECTOR, 'div.bp-loading-panel')))
-        # css_selector = "div.keyword-manage .bp-table-main-wraper>table tbody tr:first-child"
-        # tr = self.browser.find_element_by_css_selector(css_selector)
-        # WebDriverWait(self.browser, 15).until(EC.staleness_of(tr))
-        btn_close = self.browser.find_elements_by_css_selector('.J_follow_me_dialog_close')
-        if btn_close:
-            btn_close[0].click()
+                # try to close all follow-me-popups
+                while True:
+                    btn_close = self.browser.find_elements_by_css_selector('div.follow-me-close')
+                    if btn_close:
+                        webdriver.ActionChains(self.browser).send_keys(Keys.ESCAPE).perform()
+                        # wait 1 second to see if new popup commes
+                        self.browser.implicitly_wait(1)
+                        continue
+                    else:
+                        break
+                break
+            except WebDriverException as e:
+                if 'chrome not reachable' in str(e):
+                    self.logger.info('Browser Window was closed! Try to open a new browser window.')
+                    self.browser = None
+                continue
                     
     def open_price_dialog(self, tr):
         success = True
