@@ -281,7 +281,7 @@ Sponsor_Chart.prototype.load_prices = function(){
                   .attr('stroke', (d,j) => parseFloat(d[1]) < 0 ? '#00ff00' : '#ff0000')
                   .attr('stroke-width',0)
                   .attr('transform', function(d,j){
-                        return `translate(${that.xScale(d[0])},${that.yScale(Math.abs(parseFloat([1])))}) rotate(-45)`;
+                        return `translate(${that.xScale(d[0])},${that.yScale(Math.abs(parseFloat(d[1])))}) rotate(-45)`;
                   });
         this.symbols_list.push(gs)
     }
@@ -370,7 +370,7 @@ Sponsor_Chart.prototype.zoom = function(){
         for(let symbols of chart.symbols_list){
             if(symbols.classed('balance')){
                 symbols.attr('transform', function(d){
-                    return `translate(${chart.new_xScale(d[0])},${chart.yScale(Math.abs(parseFolat(d[1])))}) rotate(-45)`;
+                    return `translate(${chart.new_xScale(d[0])},${chart.yScale(Math.abs(parseFloat(d[1])))}) rotate(-45)`;
                 });
             }else{
                 symbols.attr('transform', function(d){

@@ -22,7 +22,6 @@ class Alibaba:
     api_product_manage = 'https://hz-productposting.alibaba.com/product/products_manage.htm'
 
     chrome_options = webdriver.ChromeOptions()
-    # chrome_options.add_argument('--headless')
     chrome_options.add_argument('--disable-gpu')
     chrome_options.add_argument('--disable-software-rasterizer')
     chrome_options.add_argument('--disable-extensions')
@@ -30,14 +29,25 @@ class Alibaba:
     chrome_options.add_argument('--disable-infobars')
     chrome_options.add_argument('--ignore-certificate-errors')
 
+    chrome_options_headless = webdriver.ChromeOptions()
+    chrome_options_headless.add_argument('--headless')
+    chrome_options_headless.add_argument('--disable-gpu')
+    chrome_options_headless.add_argument('--disable-software-rasterizer')
+    chrome_options_headless.add_argument('--disable-extensions')
+    chrome_options_headless.add_argument('--disable-logging')
+    chrome_options_headless.add_argument('--disable-infobars')
+    chrome_options_headless.add_argument('--ignore-certificate-errors')
 
-    def __init__(self, user, password, socketio=None, namespace=None, room=None):
+    def __init__(self, user, password, socketio=None, namespace=None, room=None, headless=False):
         self.user = user
         self.password = password
         self.socketio = socketio
         self.namespace = namespace
         self.room = room
-        self.browser = webdriver.Chrome(chrome_options=self.chrome_options)
+        if headless:
+            self.browser = webdriver.Chrome(chrome_options=self.chrome_options_headless)
+        else:
+            self.browser = webdriver.Chrome(chrome_options=self.chrome_options)
         # self.browser.set_window_size(1920, 1200)
         self.browser.maximize_window()
 

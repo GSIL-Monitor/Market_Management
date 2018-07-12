@@ -18,6 +18,8 @@ class Task():
             self.type = '关闭监控'
         elif job.name == 'shutdown':
             self.type = "关机"
+        elif job.name == 'Inquiry.check':
+            self.type = "询盘回复"
 
         if job.kwargs and 'group' in job.kwargs:
             self.group = job.kwargs['group']

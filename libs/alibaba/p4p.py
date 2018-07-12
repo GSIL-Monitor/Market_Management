@@ -84,7 +84,7 @@ class P4P():
             if kws_list is None:
                 kws_list = []
             self.keywords_list[tp] = kws_list
-            
+
     def set_keywords(self, tp, kws_list):
         self.keywords_list[tp] = kws_list
         fn = 'p4p_keywords_list_'+tp+'.json'
@@ -235,7 +235,6 @@ class P4P():
                             #             print('turn_off', end=" > ")
                             #             self.turn_off(tr)
                             #             table_reloaded = True
-
                             if prices:
                                 keywords.append([dt, id, kws, grp, prices, sponsors])
                                 if (id not in self.recent_prices):
@@ -257,7 +256,8 @@ class P4P():
                 tasks[tid]['progress'] = 100
                 socketio.emit('event_task_progress', {'tid': tid, 'progress': 100}, namespace='/markets',
                               broadcast=True)
-            self.save_crawling_result(keywords)
+            if keywords:
+                self.save_crawling_result(keywords)
 
         except Exception as e:
             print('Error: ', e)
@@ -480,8 +480,14 @@ class P4P():
                     alibaba = Alibaba(self.lid, self.lpwd, None, None, None)
                     alibaba.login()
                     self.browser = alibaba.browser
+                    self.alibaba = alibaba
 
                 self.browser.get(self.api)
+                if 'login.alibaba.com' in self.browser.current_url:
+                    self.logger.info('Was out, login again!')
+                    self.alibaba.login()
+                    self.browser.get(self.api)
+                    
                 WebDriverWait(self.browser, 15).until(
                     EC.invisibility_of_element_located((By.CSS_SELECTOR, 'div.bp-loading-panel')))
 
@@ -501,7 +507,7 @@ class P4P():
                     self.logger.info('Browser Window was closed! Try to open a new browser window.')
                     self.browser = None
                 continue
-                    
+
     def open_price_dialog(self, tr):
         success = True
         btn = tr.find_element_by_css_selector('td:nth-child(5) a')

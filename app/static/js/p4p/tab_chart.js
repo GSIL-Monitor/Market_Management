@@ -46,8 +46,10 @@ function Tab_Chart(socket, market=undefined, categories=undefined, directory=und
             let sponsors = {}
             that.balance = []
 
-            for(let arr of data[1]){
-                that.balance.push([moment(arr[0]), arr[1]])
+            if(data[1]) {
+                for (let arr of data[1]) {
+                    that.balance.push([moment(arr[0]), arr[1]])
+                }
             }
 
             for(let turn of data[0]){
@@ -254,7 +256,7 @@ Tab_Chart.prototype.load_keyword_chart = function(kw){
 
 Tab_Chart.prototype.load_sponsor_chart = function(sponsor){
     if(sponsor.name.includes('Qingdao Glitter')){
-        if (!('balance' in sponsor)){
+        if (!('balance' in sponsor) && this.balance.length != 0){
             sponsor['balance'] = this.balance
         }
     }

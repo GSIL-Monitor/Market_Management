@@ -3,6 +3,7 @@ eventlet.monkey_patch()
 
 from libs.json import JSON
 from libs.alibaba.p4p import P4P
+from libs.alibaba.inquiry import Inquiry
 from libs.task import Task
 from flask_apscheduler import APScheduler
 from apscheduler.events import EVENT_JOB_EXECUTED
@@ -40,6 +41,7 @@ eventlet_patcher()
 socketio = SocketIO()
 scheduler = APScheduler()
 
+inquiries = {}
 p4ps = {}
 active_tasks = {}
 
@@ -78,6 +80,7 @@ def scheduler_listener(event):
 def schedule_task(market, task, room=None, power_off=False):
     tasks = []
     p4p = get_p4p(market, socketio, room)
+    inquiry = get_inquiry(market)
     kwargs = {'group': task['group'], 'socketio': socketio, 'tasks': active_tasks}
     if task['type'] == 'recording':
         task_id = find_next_task_id(task_type='recording')
@@ -125,6 +128,19 @@ def schedule_task(market, task, room=None, power_off=False):
         obj['is_running'] = False
         tasks.append(obj)
 
+        task_id = 'inquiry_auto_reply'
+        # kwargs['tid'] = task_id
+        start_date = arrow.get(task['start_date'], 'YYYY-MM-DD HH:mm:ss')
+        start = start_date.shift(minutes=-2)
+        end_date = arrow.get(task['end_date'], 'YYYY-MM-DD HH:mm:ss')
+        end = end_date.shift(minutes=6)
+        job = scheduler._scheduler.add_job(inquiry.check, id=task_id, trigger='interval', minutes=5, start_date=start.format('YYYY-MM-DD HH:mm:ss'), end_date=end.format('YYYY-MM-DD HH:mm:ss'))
+        active_tasks[task_id] = {'job': job, 'is_last_run': False, 'is_running': False}
+        # job.modify(next_run_time=datetime.now())
+        obj = Task(job).__dict__
+        obj['is_last_run'] = False
+        obj['is_running'] = False
+        tasks.append(obj)
     if power_off:
         task_id = 'power_off'
         off_date = arrow.get(task['end_date'], 'YYYY-MM-DD HH:mm:ss')
@@ -159,6 +175,20 @@ def get_p4p(market, socketio, room=None):
         p4p = P4P(market, market['lid'], market['lpwd'], socketio, '/markets', room)
         p4ps[market['name']] = p4p
         return p4p
+
+
+def get_inquiry(market, account=None):
+    lname = market['lname']
+    if account is not None:
+        lname = account['lname']
+
+    key = market['name'] + lname
+    if key in inquiries:
+        return inquiries[key]
+    else:
+        inquiry = Inquiry(market, account=account)
+        inquiries[key] = inquiry
+        return inquiry
 
 
 def shutdown():

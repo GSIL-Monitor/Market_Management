@@ -1,4 +1,5 @@
 from .alibaba import Alibaba
+from libs.email import Email
 from libs.json import JSON
 
 from selenium import webdriver
@@ -12,6 +13,7 @@ from selenium.common.exceptions import StaleElementReferenceException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.action_chains import ActionChains
 
+from string import Template
 from datetime import datetime
 from bs4 import BeautifulSoup
 from pyquery import PyQuery as pq
@@ -22,6 +24,7 @@ import requests
 import time
 import re
 import math
+import ctypes
 
 import traceback
 import threading
@@ -34,8 +37,16 @@ class Inquiry:
     api = 'https://message.alibaba.com/message/default.htm'
     browser = None
     tracking_ids = None
+    reply_templates = {}
 
     def __init__(self, market, account=None, socketio=None, namespace=None, room=None):
+        self.logger = logging.getLogger(market['name'])
+        self.logger.setLevel(logging.DEBUG)
+        fh = TimedRotatingFileHandler('log/inquiry['+market['name']+'].log', when="d", interval=1,  backupCount=7)
+        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        fh.setFormatter(formatter)
+        self.logger.addHandler(fh)
+
         self.market = market
         self.account = account
         self.lid = account['lid'] if account else market['lid']
@@ -44,7 +55,15 @@ class Inquiry:
         self.socketio = socketio
         self.namespace = namespace
         self.room = room
+
+        self.account = {}
+        self.account['lid'] = self.lid
+        self.account['lpwd'] = self.lpwd
+        self.account['lname'] = self.lname
+
+        self.reply_js_template = "document.getElementById('tinymce').innerHTML = `{message}`;"
         self.load_tracking_ids()
+        self.load_reply_templates()
 
     def notify(self, typo, message):
         if self.socketio:
@@ -57,17 +76,48 @@ class Inquiry:
 
     def login(self):
         if self.browser is None:
-            self.alibaba = Alibaba(self.lid, self.lpwd, None, None, None)
+            self.alibaba = Alibaba(self.lid, self.lpwd, None, None, None, headless=True)
             self.alibaba.login()
             self.browser = self.alibaba.browser
         else:
             self.alibaba.login()
 
     def load_url(self):
-        self.browser.get(self.api)
-        div = WebDriverWait(self.browser, 15).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, 'div.aui-loading')))
-        WebDriverWait(self.browser, 15).until(EC.staleness_of(div))
+        while True:
+            try:
+                if self.browser is None:
+                    self.logger.info('open browser and login')
+                    alibaba = Alibaba(self.lid, self.lpwd, None, None, None, headless=True)
+                    alibaba.login()
+                    self.browser = alibaba.browser
+                    self.alibaba = alibaba
+
+                self.browser.get(self.api)
+                if 'login.alibaba.com' in self.browser.current_url:
+                    self.logger.info('Was out, login again!')
+                    self.alibaba.login()
+                    self.browser.get(self.api)
+
+                div = WebDriverWait(self.browser, 15).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, 'div.aui-loading')))
+                WebDriverWait(self.browser, 15).until(EC.staleness_of(div))
+
+                # try to close all follow-me-popups
+                while True:
+                    btn_close = self.browser.find_elements_by_css_selector('div.follow-me-close')
+                    if btn_close:
+                        webdriver.ActionChains(self.browser).send_keys(Keys.ESCAPE).perform()
+                        # wait 1 second to see if new popup commes
+                        self.browser.implicitly_wait(1)
+                        continue
+                    else:
+                        break
+                break
+            except WebDriverException as e:
+                if 'chrome not reachable' in str(e):
+                    self.logger.info('Browser Window was closed! Try to open a new browser window.')
+                    self.browser = None
+                continue
 
     def get_inquiries(self):
         html = pq(self.browser.page_source)
@@ -123,7 +173,7 @@ class Inquiry:
             messages.append(msg)
         buyer = {}
         email = html.find('div.main-content-sidebar div.contact-item:nth-child(2) span.contact-item-email').text()
-        buyer['email'] = email
+        buyer['email'] = email if '@' in email else None
         buyer['name'] = html.find('div.main-content-sidebar div.contact-name').text()
         return { 'messages': messages, 'buyer': buyer}
 
@@ -139,20 +189,159 @@ class Inquiry:
         self.browser.switch_to_window(self.browser.window_handles[0])
 
     def save_tracking_ids(self):
-        fn = 'inquiry_tracking_ids.json'
+        fn = 'inquiry_tracking_ids_'+self.lname.split(' ')[0]+'.json'
         root = self.market['directory'] + '_config'
         tracking_ids = {}
         for key in self.tracking_ids:
-            tracking_ids[key] = self.tracking_ids[key].to_atom_string()
+            tracking_ids[key] = {}
+            tracking_ids[key]['datetime'] = self.tracking_ids[key]['datetime'].to_atom_string()
+            tracking_ids[key]['status'] = self.tracking_ids[key]['status']
+            if 'emails' in self.tracking_ids[key]:
+                tracking_ids[key]['emails'] = self.tracking_ids[key]['emails']
         JSON.serialize(tracking_ids, root, [], fn)
 
     def load_tracking_ids(self):
-        fn = 'inquiry_tracking_ids.json'
+        fn = 'inquiry_tracking_ids_'+self.lname.split(' ')[0]+'.json'
         root = self.market['directory'] + '_config'
         tracking_ids = JSON.deserialize(root, [], fn)
         self.tracking_ids = {}
         if tracking_ids is not None:
             for key in tracking_ids:
-                d = pendulum.parse(tracking_ids[key])
+                d = pendulum.parse(tracking_ids[key]['datetime'])
                 if d.diff().in_hours()<=12:
-                    self.tracking_ids[key] = d
+                    self.tracking_ids[key] = {}
+                    self.tracking_ids[key]['datetime'] = d
+                    self.tracking_ids[key]['status'] = tracking_ids[key]['status']
+                    if 'emails' in tracking_ids[key]:
+                        self.tracking_ids[key]['emails'] = tracking_ids[key]['emails']
+
+    def load_reply_templates(self):
+        self.reply_templates = {}
+        file = './/templates//inquiry_reply_template_acquire_email_address.html'
+        with open(file, 'r') as f:
+            text = f.read()
+        self.reply_templates['acquire_email_address'] = Template(text)
+
+        file = './/templates//inquiry_reply_template_notify_catalog_was_sent.html'
+        with open(file, 'r') as f:
+            text = f.read()
+        self.reply_templates['notify_catalog_was_sent'] = Template(text)
+
+    def is_auto_reply_needed(self, enquiry):
+        eid = enquiry['id']
+        # if enquiry['id'] == '11947313067':
+        #     if eid not in self.tracking_ids:
+        #         self.tracking_ids[eid] = {}
+        #         self.tracking_ids[eid]['datetime'] = pendulum.now()
+        #         self.tracking_ids[eid]['status'] = ['new']
+        #         self.save_tracking_ids()
+        #     return True
+
+        if enquiry['responsible_person'].lower() != self.lname.lower():
+            return False
+
+        if eid in self.tracking_ids and self.tracking_ids[eid]['datetime'].diff().in_hours() <= 12:
+            if not enquiry['is_replied']:
+                return True
+        if len(enquiry['tags']) == 0 and enquiry['is_new']:
+            if eid not in self.tracking_ids:
+                self.tracking_ids[eid] = {}
+                self.tracking_ids[eid]['datetime'] = pendulum.now()
+                self.tracking_ids[eid]['status'] = ['new']
+                self.save_tracking_ids()
+            return True
+        return False
+
+    def reply(self, enquiry):
+        try:
+            self.open_inquiry_in_new_tab(enquiry)
+            conversation = self.get_conversation()
+
+            messages = conversation['messages']
+            buyer = conversation['buyer']
+
+            last_buyer_messages = []
+            is_replied = False
+            reply_count = 0
+            for msg in messages:
+                if msg['position'] == 'left':
+                    last_buyer_messages.append(msg)
+                    is_replied = False
+                elif msg['position'] == 'right' and 'Seller Assistant' not in msg['user']:
+                    last_buyer_messages = []
+                    is_replied = True
+                    reply_count += 1
+
+            eid = enquiry['id']
+            tracking = self.tracking_ids[eid]
+            last_status = tracking['status'][-1]
+            if last_status == 'new':
+                greetings = '<p>Pleased to hear from you.</p><br>'
+                # buyer['email'] = 'changshu.qd@gmail.com'
+                if buyer['email']:
+                    emails = [buyer['email']]
+                    mime_message = Email.message_of_product_catalog(self.market, self.account, buyer['name'])
+                    if Email.send(self.account, emails, mime_message):
+                        params = {'buyer': buyer['name'], 'greetings': greetings, 'email': buyer['email'],
+                                  'sender': self.lname}
+                        message = self.reply_templates['notify_catalog_was_sent'].substitute(params)
+                        self.send_message(message)
+                        tracking['status'].append('catalog was sent by email')
+                        self.save_tracking_ids()
+                else:
+                    params = {'buyer': buyer['name'], 'greetings': greetings, 'sender': self.lname}
+                    message = self.reply_templates['acquire_email_address'].substitute(params)
+                    self.send_message(message)
+                    tracking['status'].append('wait for email address')
+                    self.save_tracking_ids()
+            elif 'catalog was sent' in last_status:
+                pass
+            elif 'wait for email address' in last_status:
+                text = ''
+                for msg in last_buyer_messages:
+                    text = text + '\n\n ' + msg['content']
+                emails = re.findall('([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)', text)
+                print(emails)
+                if emails:
+                    tracking['emails'] = emails
+                    self.save_tracking_ids()
+                    mime_message = Email.message_of_product_catalog(self.market, self.account, buyer['name'])
+                    if Email.send(self.account, emails, mime_message):
+                        greetings = ''
+                        params = {'buyer': buyer['name'], 'greetings': greetings, 'email': ', '.join(emails),
+                                  'sender': self.lname}
+                        message = self.reply_templates['notify_catalog_was_sent'].substitute(params)
+                        self.send_message(message)
+                        tracking['status'].append('catalog was sent by email')
+                        self.save_tracking_ids()
+        except Exception as e:
+            self.notify("danger", '回复 询盘 [' + enquiry['id'] + '] 时 发生错误! ' + str(e))
+            traceback.print_exc()
+        finally:
+            self.close_inquiry_and_switch_back()
+
+    def send_message(self, message, attachment=None):
+        chat_form = self.browser.find_element_by_css_selector('form.reply-wrapper')
+        chat_form.click()
+
+        WebDriverWait(self.browser, 15).until(
+            EC.frame_to_be_available_and_switch_to_it((By.CSS_SELECTOR, '#inquiry-content_ifr')))
+        body = self.browser.find_element_by_tag_name('body')
+        body.click()
+
+        js = self.reply_js_template.format(message=message)
+        self.browser.execute_script(js)
+        self.browser.switch_to.default_content()
+        time.sleep(1)
+        btn_send = chat_form.find_element_by_css_selector('button.send')
+        btn_send.click()
+
+    def check(self, tid=None):
+        self.load_url()
+        inquiries = self.get_inquiries()
+
+        for enquiry in inquiries:
+            if not self.is_auto_reply_needed(enquiry):
+                continue
+            print('enquiry ' + enquiry['id'] + ' reply is needed')
+            self.reply(enquiry)
