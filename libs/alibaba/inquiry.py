@@ -87,7 +87,7 @@ class Inquiry:
             try:
                 if self.browser is None:
                     self.logger.info('open browser and login')
-                    alibaba = Alibaba(self.lid, self.lpwd, None, None, None, headless=True)
+                    alibaba = Alibaba(self.lid, self.lpwd, None, None, None, headless=False)
                     alibaba.login()
                     self.browser = alibaba.browser
                     self.alibaba = alibaba
@@ -336,12 +336,48 @@ class Inquiry:
         btn_send = chat_form.find_element_by_css_selector('button.send')
         btn_send.click()
 
-    def check(self, tid=None):
+    def check(self, group=None, tid=None, socketio=None, tasks=None):
+        if tid:
+            tasks[tid]['is_running'] = True
+            msg = {'name': 'P4P.crawl', 'tid': tid, 'group': group, 'is_last_run': tasks[tid]['is_last_run']}
+            socketio.emit('event_task_start_running', msg, namespace='/markets', broadcast=True)
+        if tid:
+            tasks[tid]['progress'] = 1
+            socketio.emit('event_task_progress', {'tid': tid, 'progress': 1}, namespace='/markets', broadcast=True)
+
         self.load_url()
+
+        if tid:
+            tasks[tid]['progress'] = 15
+            socketio.emit('event_task_progress', {'tid': tid, 'progress': 15}, namespace='/markets', broadcast=True)
+
         inquiries = self.get_inquiries()
 
+        if tid:
+            tasks[tid]['progress'] = 20
+            socketio.emit('event_task_progress', {'tid': tid, 'progress': 20}, namespace='/markets', broadcast=True)
+
+        count = len(inquiries)
+
+        idx = 0
         for enquiry in inquiries:
+            idx += 1
+            if tid:
+                progress = 20 + 80*idx/count
+                tasks[tid]['progress'] = progress
+                socketio.emit('event_task_progress', {'tid': tid, 'progress': progress}, namespace='/markets', broadcast=True)
+
             if not self.is_auto_reply_needed(enquiry):
                 continue
+
             print('enquiry ' + enquiry['id'] + ' reply is needed')
             self.reply(enquiry)
+        
+        if tid:
+            tasks[tid]['is_running'] = False
+            tasks[tid]['progress'] = 0
+            if tasks[tid]['is_last_run']:
+                del tasks[tid]
+                socketio.emit('event_task_last_run_finished', {'tid': tid}, namespace='/markets', broadcast=True)
+
+

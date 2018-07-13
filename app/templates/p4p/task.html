@@ -31,8 +31,12 @@
                 <label class="input-group-text" for="task_type">类 型</label>
             </div>
             <select class="custom-select" id="task_type">
-                <option value="recording">记 录</option>
-                <option selected value="monitor">监 控</option>
+                <option class="repeated" value="recording">记 录</option>
+                <option class="repeated" selected value="monitor">监 控</option>
+                <option class="repeated" value="monitor_and_recording">监控并记录</option>
+                <option class="" value="turn_off_monitor">关闭监控</option>
+                <option class="repeated" value="inquiry_reply">询盘回复</option>
+                <option class="" value="shutdown_computer">关 机</option>
             </select>
             <button type="button" class="btn btn-primary add_task">添 加</button>
         </div>
@@ -53,11 +57,11 @@
                 <label class="btn btn-secondary active">
                     <input type="checkbox" checked autocomplete="off">五
                 </label>
-                <label class="btn btn-secondary ">
-                    <input type="checkbox" autocomplete="off">六
+                <label class="btn btn-secondary active">
+                    <input type="checkbox" checked autocomplete="off">六
                 </label>
-                <label class="btn btn-secondary ">
-                    <input type="checkbox" autocomplete="off">日
+                <label class="btn btn-secondary active">
+                    <input type="checkbox" checked autocomplete="off">日
                 </label>
             </div>
             <button type="button" class="btn btn-primary save_task">保 存</button>

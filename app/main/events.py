@@ -34,7 +34,7 @@ from libs.crawlers.keywords_crawler_amazon import KwclrAmazon
 
 @socketio.on('add_task', namespace='/markets')
 def add_task(market, task):
-    return schedule_task(market, task, request.sid)
+    return schedule_task(market, task)
     # tasks = []
     # p4p = get_p4p(market, socketio, request.sid)
     # kwargs = {'group': task['group'], 'socketio': socketio, 'tasks': all_tasks}

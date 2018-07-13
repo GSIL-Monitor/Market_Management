@@ -487,7 +487,7 @@ class P4P():
                     self.logger.info('Was out, login again!')
                     self.alibaba.login()
                     self.browser.get(self.api)
-                    
+
                 WebDriverWait(self.browser, 15).until(
                     EC.invisibility_of_element_located((By.CSS_SELECTOR, 'div.bp-loading-panel')))
 

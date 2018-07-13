@@ -15,7 +15,7 @@ function Tab_Task(socket, market=undefined, categories=undefined, directory=unde
         that.refresh()
     })
 
-    this.$content.find('#task_interval').val(30)
+    this.$content.find('#task_interval').val(5)
     this.$content.find('#task_start_date').bootstrapMaterialDatePicker({
         format:'YYYY-MM-DD',
         time: false,
@@ -48,18 +48,48 @@ function Tab_Task(socket, market=undefined, categories=undefined, directory=unde
     });
     this.$content.find('#task_end_date').bootstrapMaterialDatePicker('setMinDate', moment().add('5', 'm'))
 
+    this.$content.find('select#task_type').change(function(){
+        let task_type = $(this).val()
+        let repeated = $(this).find(`option[value="${task_type}"]`).hasClass('repeated')
+        if(!repeated){
+            $('#task_interval').prop('disabled', true)
+            $('#task_end_date').prop('disabled', true)
+            $('#task_end_time').prop('disabled', true)
+        }else{
+            $('#task_interval').prop('disabled', false)
+            $('#task_end_date').prop('disabled', false)
+            $('#task_end_time').prop('disabled', false)
+        }
+        if(task_type == 'inquiry_reply' || task_type == 'shutdown_computer'){
+            $('#keywords_group').prop('disabled', true)
+        }else{
+            $('#keywords_group').prop('disabled', false)
+        }
+    })
+
     this.$content.find('button.add_task').click(function(){
 
         let task = {}
+        task['type'] = $('#task_type').val().trim()
+        task['repeated'] = $('#task_type').find(`option[value="${task.type}"]`).hasClass('repeated')
         task['interval'] = $('#task_interval').val().trim()
         task['start_date'] = $('#task_start_date').val().trim()+' '+$('#task_start_time').val().trim()+":00"
-        task['end_date'] = $('#task_end_date').val().trim()+' '+$('#task_end_time').val().trim()+":00"
-        task['group'] = $('#keywords_group').val().trim()
-        task['type'] = $('#task_type').val().trim()
+        if(task.repeated){
+            task['end_date'] = $('#task_end_date').val().trim()+' '+$('#task_end_time').val().trim()+":00"
+        }else{
+            task['end_date'] = task['start_date']
+        }
+        
+        if($('#keywords_group').prop('disabled')){
+            task['group'] = null
+        }else{
+            task['group'] = $('#keywords_group').val().trim()
+        }
 
-        if(moment(task['start_date']).isAfter(task['end_date'])){
+        if(task['repeated'] && moment(task['start_date']).isAfter(task['end_date'])){
             alert("开始时间 必须 早于 结束时间");
         }else{
+            // console.log(task)
             socket.emit('add_task', market, task, function(tasks){
                 console.log(tasks)
             })
@@ -70,11 +100,20 @@ function Tab_Task(socket, market=undefined, categories=undefined, directory=unde
 
         let task = {}
         task['id'] = + new Date()
+        task['type'] = $('#task_type').val().trim()
+        task['repeated'] = $('#task_type').find(`option[value="${task.type}"]`).hasClass('repeated')
         task['interval'] = $('#task_interval').val().trim()
         task['start_date'] = $('#task_start_time').val().trim()+":00"
-        task['end_date'] = $('#task_end_time').val().trim()+":00"
-        task['group'] = $('#keywords_group').val().trim()
-        task['type'] = $('#task_type').val().trim()
+        if(task.repeated){
+            task['end_date'] = $('#task_end_time').val().trim()+":00"
+        }else {
+            task['end_date'] = task['start_date']
+        }
+        if($('#keywords_group').prop('disabled')){
+            task['group'] = null
+        }else{
+            task['group'] = $('#keywords_group').val().trim()
+        }
 
         let weekdays = []
         for(let label of $(this).prev().find('label')){
@@ -143,7 +182,7 @@ function Tab_Task(socket, market=undefined, categories=undefined, directory=unde
         }).catch(error => console.log(error))
 
     socket.on('event_task_added', function(task){
-        if(task.market_name != market.name){
+        if(task.market_name != market.name && !task.id.includes('shutdown_computer')){
             return
         }
 
@@ -315,25 +354,35 @@ Tab_Task.prototype.load_tasks = function(){
 
 function task_to_tr(task){
     let group = task.group
-    if(group == 'all'){
+    if(group=='all'){
         group = '全 部'
+    }else if(group==null){
+        group = '- - - - - -'
     }
+
+    let task_type = $('#task_type').find(`option[value="${task.type}"]`).text()
+
+    let interval = task.interval
+    if(!task.repeated){
+        interval = '-'
+    }
+
     let tds = ''
     let wds = ''
     for (let [idx, day] of task['weekdays'].entries()) {
         let cls = 'badge-secondary'
         if (day) {
-            cls = 'badge-primary'
+            cls = 'badge-info'
         }
         let days = ['一', '二', '三', '四', '五', '六', '日']
         wds = `${wds}<span class="badge ${cls}">${days[idx]}</span>`
     }
     tds = `${tds}<td class="weekdays">${wds}</td>`
-    tds = `${tds}<td class="interval">${task.interval}</td>`
+    tds = `${tds}<td class="interval">${interval}</td>`
     tds = `${tds}<td class="date">${task.start_date}</td>`
     tds = `${tds}<td class="date">${task.end_date}</td>`
     tds = `${tds}<td class="group">${group}</td>`
-    tds = `${tds}<td class="type">${task.type}</td>`
+    tds = `${tds}<td class="type">${task_type}</td>`
     let button = `<button type='button' class="btn btn-sm btn-dark remove"><i class="material-icons">delete</i></button>`
     tds = `${tds}<td>${button}</td>`
 
@@ -344,6 +393,8 @@ function active_task_to_tr(task, count=''){
     let group = task.group
     if(group == 'all'){
         group = '全 部'
+    }else if(!group){
+        group = '- - - - - -'
     }
     let cls = [task.id]
     let tds = `<td>${count}</td>`
@@ -356,7 +407,7 @@ function active_task_to_tr(task, count=''){
     }else if(task.trigger_type == 'date'){
         tds = `${tds}<td> - </td>`
         tds = `${tds}<td>${task.run_date}</td>`
-        tds = `${tds}<td> -------- --:--:-- </td>`
+        tds = `${tds}<td>${task.run_date}</td>`
         tds = `${tds}<td>${group}</td>`
         tds = `${tds}<td>${task.type}</td>`
     }
@@ -386,7 +437,6 @@ function active_task_to_tr(task, count=''){
     buttons = `${buttons}<button type='button' class="btn btn-sm btn-dark remove_task">${remove_icon}</button>`
     tds = `${tds}<td>${buttons}</td>`
 
-    console.log(cls)
     return `<tr class="${cls.join(' ')}" data-id="${task.id}">${tds}</tr>`
 }
 

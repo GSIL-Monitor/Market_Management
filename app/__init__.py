@@ -45,6 +45,7 @@ inquiries = {}
 p4ps = {}
 active_tasks = {}
 
+
 logger = logging.getLogger('APP')
 logger.setLevel(logging.DEBUG)
 fh = TimedRotatingFileHandler('log/app.log', when="d", interval=1, backupCount=7)
@@ -52,6 +53,7 @@ formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(messag
 fh.setFormatter(formatter)
 logger.addHandler(fh)
 
+app = {'current_task_id': 0}
 
 def scheduler_listener(event):
     print(arrow.now().format('YYYY-MM-DD HH:mm:ss'), event.code)
@@ -77,7 +79,7 @@ def scheduler_listener(event):
             socketio.emit('event_task_executed', Task(job).__dict__, namespace='/markets', broadcast=True)
 
 
-def schedule_task(market, task, room=None, power_off=False):
+def add_task_to_scheduler_bak(market, task, room=None, power_off=False):
     tasks = []
     p4p = get_p4p(market, socketio, room)
     inquiry = get_inquiry(market)
@@ -154,18 +156,56 @@ def schedule_task(market, task, room=None, power_off=False):
 
     return tasks
 
+def find_next_task_id():
+    app['current_task_id'] += 1
+    return format(app['current_task_id'], '03d')
 
-def find_next_task_id(task_type='recording'):
-    max_tid = 0
-    # jobs = scheduler.get_jobs()
-    for id in active_tasks:
-        text = id
-        if task_type in text:
-            tid = int(text.split('_')[1])
-            if tid > max_tid:
-                max_tid = tid
-    max_tid += 1
-    return task_type + '_' + str(max_tid)
+def schedule_task(market, task):
+    tasks = []
+    if task['type'] == 'monitor_and_recording':
+        task['type'] = 'monitor'
+
+        tasks.append(active_task(market, task))
+        task['type'] = 'recording'
+        start_date = arrow.get(task['start_date'], 'YYYY-MM-DD HH:mm:ss')
+        start = start_date.shift(minutes=-3)
+        task['start_date'] = start.format('YYYY-MM-DD HH:mm:ss')
+        end_date = arrow.get(task['end_date'], 'YYYY-MM-DD HH:mm:ss')
+        end = end_date.shift(minutes=3)
+        task['end_date'] = end.format('YYYY-MM-DD HH:mm:ss')
+        tasks.append(active_task(market, task))
+    else:
+        tasks.append(active_task(market, task))
+
+    return tasks
+
+def active_task(market, task):
+    kwargs = {'group': task['group'], 'socketio': socketio, 'tasks': active_tasks}
+    task_id = find_next_task_id()+'-'+market['name']+'-'+task['type']
+    kwargs['tid'] = task_id
+
+    if task['type'] == 'recording':
+        p4p = get_p4p(market, socketio)
+        job = scheduler._scheduler.add_job(p4p.crawl, id=task_id, trigger='interval', kwargs=kwargs, minutes=int(task['interval']), start_date=task['start_date'], end_date=task['end_date'])
+    elif task['type'] == 'monitor':
+        p4p = get_p4p(market, socketio)
+        job = scheduler._scheduler.add_job(p4p.monitor, id=task_id, trigger='interval', kwargs=kwargs, minutes=int(task['interval']), start_date=task['start_date'], end_date=task['end_date'])
+    elif task['type'] == 'turn_off_monitor':
+        p4p = get_p4p(market, socketio)
+        job = scheduler._scheduler.add_job(p4p.turn_all_off, id=task_id, trigger='date', kwargs=kwargs, run_date=task['start_date'])
+    elif task['type'] == 'inquiry_reply':
+        inquiry = get_inquiry(market)
+        job = scheduler._scheduler.add_job(inquiry.check, id=task_id, trigger='interval', kwargs=kwargs, minutes=int(task['interval']), start_date=task['start_date'], end_date=task['end_date'])
+    elif task['type'] == 'shutdown_computer':
+        job = scheduler._scheduler.add_job(shutdown, id=task_id, trigger='date', run_date=task['start_date'])
+
+    active_tasks[task_id] = {'job': job, 'is_last_run': False, 'is_running': False}
+    # job.modify(next_run_time=datetime.now())
+    obj = Task(job).__dict__
+    obj['is_last_run'] = False
+    obj['is_running'] = False
+    
+    return obj
 
 
 def get_p4p(market, socketio, room=None):
@@ -256,8 +296,6 @@ def create_app(debug=True):
     if app.debug and os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
         return app
 
-    logger.info('app begin to start ... ... ')
-
     scheduler.add_listener(scheduler_listener, EVENT_ALL)
     scheduler.start()
 
@@ -272,18 +310,6 @@ def create_app(debug=True):
     if not markets:
         markets = {}
     data.markets = markets
-
-    #
-    # setup selenium with chrome browser
-    #
-    # chrome_options = webdriver.ChromeOptions()
-    # # chrome_options.add_argument('--headless')
-    # chrome_options.add_argument('--disable-gpu')
-    # chrome_options.add_argument('--disable-extensions')
-    # chrome_options.add_argument('--disable-logging')
-    # chrome_options.add_argument('--ignore-certificate-errors')
-    # data.browser = webdriver.Chrome(chrome_options=chrome_options)
-
 
     chrome_options_headless = webdriver.ChromeOptions()
     # chrome_options_headless.add_argument('--headless')
@@ -309,20 +335,27 @@ def create_app(debug=True):
         p4p_tasks = JSON.deserialize(market['directory']+"_config", '', 'p4p_tasks.json')
         if not p4p_tasks:
             p4p_tasks = []
+
+        print()
         for task in p4p_tasks:
             if task['weekdays'][weekday]:
                 t = {}
                 t['interval'] = task['interval']
+                # t['repeated'] = task['repeated']
                 t['group'] = task['group']
                 t['type'] = task['type']
                 start_date = arrow.get(now.format('YYYY-MM-DD') + ' ' + task['start_date'], 'YYYY-MM-DD HH:mm:ss')
                 end_date = arrow.get(now.format('YYYY-MM-DD') + ' ' + task['end_date'], 'YYYY-MM-DD HH:mm:ss')
+
                 if end_date < start_date:
+                    end_date = end_date.shift(days=1)
+                if end_date < now.shift(minutes=30):
+                    start_date = start_date.shift(days=1)
                     end_date = end_date.shift(days=1)
                 t['start_date'] = start_date.format('YYYY-MM-DD HH:mm:ss')
                 t['end_date'] = end_date.format('YYYY-MM-DD HH:mm:ss')
-                schedule_task(market, t, power_off=True)
+                print('>>>>', t)
 
-    logger.info("app is now ready for accessing")
+                schedule_task(market, t)
+        print()
     return app
-
