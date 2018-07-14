@@ -12,6 +12,7 @@ from selenium.common.exceptions import StaleElementReferenceException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.action_chains import ActionChains
 
+import pendulum
 import arrow
 from datetime import datetime
 from bs4 import BeautifulSoup
@@ -73,6 +74,8 @@ class P4P():
         self.recent_prices = {}
 
         self.balance = None
+        self.default_position = 5
+        self.kws_tracking = {}
 
     def load_keywords(self, tp):
         if not tp:
@@ -207,34 +210,31 @@ class P4P():
                                 idx += 1
                                 continue
 
-                            sponsors = self.find_sponsors(kws)
+                            [prices, sponsors] = self.find_prices_and_sponsors()
 
-                            # @redo: retry to fetch prices
-                            prices = []
-                            count = 0
-                            while count < 10:
-                                if count == 0:
-                                    prices = self.find_prices()
-                                elif count <= 5:
-                                    prices = self.find_prices(tr)
-                                else:
-                                    prices = ['0', '0', '0', '0', '0', '0']
-                                    print('failed to get prices, using default zero values')
-                                    break
+                            # sponsors = self.find_sponsors(kws)
+                            #
+                            # # @redo: retry to fetch prices
+                            # prices = []
+                            # count = 0
+                            # while count < 10:
+                            #     if count == 0:
+                            #         prices = self.find_prices()
+                            #     elif count <= 5:
+                            #         prices = self.find_prices(tr)
+                            #     else:
+                            #         prices = ['0', '0', '0', '0', '0', '0']
+                            #         print('failed to get prices, using default zero values')
+                            #         break
+                            #
+                            #     if prices is None:
+                            #         break
+                            #
+                            #     if len(prices) != 0:
+                            #         break
+                            #     count += 1
+                            #     time.sleep(5)
 
-                                if prices is None:
-                                    break
-
-                                if len(prices) != 0:
-                                    break
-                                count += 1
-                                time.sleep(5)
-                            # if id in self.keywords_list['monitor']:
-                            #     if self.find_sponsor_list_position(sponsors=sponsors['sponsor_list']) == 0:
-                            #         if self.is_on(tr):
-                            #             print('turn_off', end=" > ")
-                            #             self.turn_off(tr)
-                            #             table_reloaded = True
                             if prices:
                                 keywords.append([dt, id, kws, grp, prices, sponsors])
                                 if (id not in self.recent_prices):
@@ -271,19 +271,24 @@ class P4P():
                     socketio.emit('event_task_last_run_finished', {'tid': tid}, namespace='/markets', broadcast=True)
 
     def monitor(self, group='all', tid=None, socketio=None, tasks=None):
-        tasks[tid]['is_running'] = True
-        msg = {'name': 'P4P.monitor', 'tid': tid, 'group': group, 'is_last_run': tasks[tid]['is_last_run']}
-        socketio.emit('event_task_start_running', msg, namespace='/markets', broadcast=True)
+        if tid:
+            tasks[tid]['is_running'] = True
+            msg = {'name': 'P4P.monitor', 'tid': tid, 'group': group, 'is_last_run': tasks[tid]['is_last_run']}
+            socketio.emit('event_task_start_running', msg, namespace='/markets', broadcast=True)
 
         try:
-            print('Task Monitor start to run with group="'+group+'"')
+            print('Task Monitor start to run with group="' + group + '"')
+            keywords = []
             self.load_keywords('monitor')
-            tasks[tid]['progress'] = 1
-            socketio.emit('event_task_progress', {'tid': tid, 'progress': 1}, namespace='/markets', broadcast=True)
+            if tid:
+                tasks[tid]['progress'] = 1
+                socketio.emit('event_task_progress', {'tid': tid, 'progress': 1}, namespace='/markets', broadcast=True)
             with self.lock:
                 self.load_url()
-                tasks[tid]['progress'] = 2
-                socketio.emit('event_task_progress', {'tid': tid, 'progress': 2}, namespace='/markets', broadcast=True)
+                if tid:
+                    tasks[tid]['progress'] = 2
+                    socketio.emit('event_task_progress', {'tid': tid, 'progress': 2}, namespace='/markets',
+                                  broadcast=True)
                 all_kws_count = int(self.browser.find_element_by_css_selector('a.all-kwcount span').text)
 
                 kws_count = 0
@@ -295,14 +300,16 @@ class P4P():
                     idx = 0
                     while True:
                         kws_count += 1
-                        tasks[tid]['progress'] = int(kws_count/all_kws_count*97)+3
-                        socketio.emit('event_task_progress', {'tid': tid, 'progress': tasks[tid]['progress']}, namespace='/markets', broadcast=True)
+                        if tid:
+                            tasks[tid]['progress'] = int(kws_count / all_kws_count * 97) + 3
+                            socketio.emit('event_task_progress', {'tid': tid, 'progress': tasks[tid]['progress']},
+                                          namespace='/markets', broadcast=True)
 
                         print(table_reloaded, end=" > ")
                         if table_reloaded:
-                            trs =  table.find_elements_by_css_selector('tbody tr')
+                            trs = table.find_elements_by_css_selector('tbody tr')
                             table_reloaded = False
-                            
+
                         print('index:', idx, len(trs), end=' > ')
                         if idx >= len(trs):
                             print('')
@@ -317,8 +324,8 @@ class P4P():
                                 idx += 1
                                 continue
 
+                            grp = tr.find_element_by_css_selector('td:nth-child(4)').text.strip()
                             if group != 'all':
-                                grp = tr.find_element_by_css_selector('td:nth-child(4)').text.strip()
                                 if group != grp:
                                     print('skipped_not_in_group', group, grp)
                                     idx += 1
@@ -329,41 +336,113 @@ class P4P():
 
                             print(kws, end=' > ')
 
-                            current_position = self.find_sponsor_list_position(kws=kws)
-                            if current_position <= 4:
-                                print('set_price: at pos 5', end=" > ")
-                                self.set_price(tr, position=5)
+                            if not self.open_price_dialog(tr):
+                                print('skipped_2')
+                                idx += 1
+                                continue
+
+                            [prices, sponsors] = self.find_prices_and_sponsors(close=False)
+
+                            if prices:
+                                keywords.append([dt, id, kws, grp, prices, sponsors])
+
+                            current_position = self.find_sponsor_list_position(sponsors=sponsors['sponsor_list'])
+                            click_position = self.get_click_position(id, current_position)
+
+                            if click_position != -1:
+                                self.set_price(position=click_position)
+                            else:
+                                webdriver.ActionChains(self.browser).send_keys(Keys.ESCAPE).perform()
                             if not self.is_on(tr):
                                 print('turn_on', end=" > ")
                                 self.turn_on(tr)
                                 table_reloaded = True
-                            
+
                             idx += 1
                             print(' >>>>>> successful end ')
                         except StaleElementReferenceException as e:
                             table_reloaded = True
                             print(' >>>>>> failed ... .... , retry .... ...')
                             continue
-                        
+
                     if not self.next_page():
                         break
-            tasks[tid]['progress'] = 100
-            socketio.emit('event_task_progress', {'tid': tid, 'progress': 100}, namespace='/markets', broadcast=True)
+
+            if keywords:
+                self.save_crawling_result(keywords)
+            if tid:
+                tasks[tid]['progress'] = 100
+                socketio.emit('event_task_progress', {'tid': tid, 'progress': 100}, namespace='/markets',
+                              broadcast=True)
         except Exception as e:
             print('Error: ', e)
             traceback.print_exc()
         finally:
-            tasks[tid]['is_running'] = False
-            tasks[tid]['progress'] = 0
-            if tasks[tid]['is_last_run']:
-                del tasks[tid]
-                socketio.emit('event_task_last_run_finished', {'tid': tid}, namespace='/markets', broadcast=True)
+            if tid:
+                tasks[tid]['is_running'] = False
+                tasks[tid]['progress'] = 0
+                if tasks[tid]['is_last_run']:
+                    del tasks[tid]
+                    socketio.emit('event_task_last_run_finished', {'tid': tid}, namespace='/markets', broadcast=True)
 
     def save_crawling_result(self, keywords):
         root = self.market['directory'] + '_config'
         date_str = keywords[0][0].split(' ')[0]
         fn = 'p4p_keywords_crawl_result_'+date_str+'.json.gz'
         JSON.serialize(keywords, root, [], fn, append=True)
+
+    def load_url(self):
+        while True:
+            try:
+                if self.browser is None:
+                    self.logger.info('open browser and login')
+                    alibaba = Alibaba(self.lid, self.lpwd, None, None, None)
+                    alibaba.login()
+                    self.browser = alibaba.browser
+                    self.alibaba = alibaba
+
+                self.browser.get(self.api)
+                if 'login.alibaba.com' in self.browser.current_url:
+                    self.logger.info('Was out, login again!')
+                    self.alibaba.login()
+                    self.browser.get(self.api)
+
+                WebDriverWait(self.browser, 15).until(
+                    EC.invisibility_of_element_located((By.CSS_SELECTOR, 'div.bp-loading-panel')))
+
+                # try to close all follow-me-popups
+                while True:
+                    btn_close = self.browser.find_elements_by_css_selector('div.follow-me-close')
+                    if btn_close:
+                        webdriver.ActionChains(self.browser).send_keys(Keys.ESCAPE).perform()
+                        # wait 1 second to see if new popup commes
+                        self.browser.implicitly_wait(1)
+                        continue
+                    else:
+                        break
+                break
+            except WebDriverException as e:
+                if 'chrome not reachable' in str(e):
+                    self.logger.info('Browser Window was closed! Try to open a new browser window.')
+                    self.browser = None
+                continue
+
+    def open_price_dialog(self, tr):
+        success = True
+        btn = tr.find_element_by_css_selector('td:nth-child(5) a')
+        # self.browser.implicitly_wait(1)
+        WebDriverWait(self.browser, 15).until(EC.invisibility_of_element_located((By.CSS_SELECTOR, 'div.ui-mask')))
+
+        self.click(btn)
+
+        WebDriverWait(self.browser, 15).until(
+            EC.invisibility_of_element_located((By.CSS_SELECTOR, 'div.bp-loading-panel')))
+
+        checkbox = tr.find_element_by_css_selector('td:first-child input')
+        if checkbox.is_selected():
+            checkbox.click()
+            success = False
+        return success
 
     def find_sponsors(self, kws):
         url = 'https://www.alibaba.com/trade/search?fsb=y&IndexArea=product_en&viewtype=L&CatId=&SearchText=' + re.sub(
@@ -412,6 +491,346 @@ class P4P():
                     company['record'].append(item['record']['responseRate'])
 
         return {'top_sponsor': top_sponsor, 'sponsor_list': sponsor_list}
+
+    def find_prices_and_sponsors(self, close=True):
+        prices = []
+        sponsors = None
+
+        kws = self.browser.find_element_by_css_selector(
+            '.sc-manage-edit-price-dialog span[data-role="span-keyword"]').text.strip()
+        sponsors = self.find_sponsors(kws)
+
+        while True:
+            try:
+                price_table_tbody_selector = ".sc-manage-edit-price-dialog table tbody,.sc-manage-edit-price-dialog p.util-clearfix"
+                price_table_tbody = WebDriverWait(self.browser, 15).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, price_table_tbody_selector)))
+
+                if price_table_tbody.tag_name == 'p':
+                    prices = None
+                    break
+
+                for btn in price_table_tbody.find_elements_by_css_selector('a'):
+                    price = btn.text.strip()
+                    float(price)
+                    prices.append(price)
+
+                self.check_balance()
+                break
+            except StaleElementReferenceException:
+                #             self.browser.implicitly_wait(0.5)
+                time.sleep(0.5)
+                continue
+            except ValueError:
+                prices = []
+                break
+        if close:
+            webdriver.ActionChains(self.browser).send_keys(Keys.ESCAPE).perform()
+        return [prices, sponsors]
+
+    def find_sponsor_list_position(self, kws=None, sponsors=None):
+        if not kws and not sponsors:
+            raise Exception('kws and sponsors can\'t be None at the same time')
+
+        if kws:
+            sponsors = self.find_sponsors(kws)
+            sponsor_list = sponsors['sponsor_list']
+        elif sponsors:
+            sponsor_list = sponsors
+        
+        idx = -1
+        count = 0
+        for sponsor in sponsor_list:
+            count += 1
+            if "glittereyelash.en.alibaba.com" in sponsor['url']:
+                idx = count
+                break
+        return idx
+
+    def get_click_position(self, kws_id, current_pos):
+        now = pendulum.now()
+        if kws_id not in self.kws_tracking:
+            tracking = {}
+            tracking['position'] = [self.default_position, now, False]
+            self.kws_tracking[kws_id] = tracking
+            return self.default_position
+        else:
+            tracking = self.kws_tracking[kws_id]
+            [pos, dt, is_out] = tracking['position']
+            if current_pos == -1:
+                pos = 3
+                tracking['position'] = [pos, now, True]
+                return pos
+            elif is_out:
+                period = now.diff(dt).in_minutes()
+                if period <= 5:
+                    if current_pos >= 3:
+                        return -1
+                    else:
+                        pos = 3
+                        tracking['position'] = [pos, dt, True]
+                elif 5 < period <= 15:
+                    if current_pos >= 4:
+                        return -1
+                    else:
+                        pos = 4
+                        tracking['position'] = [pos, dt, True]
+                else:
+                    pos = 5
+                    tracking['position'] = [pos, dt, False]
+                return pos
+            elif current_pos == self.default_position:
+                return -1
+            else:
+                return self.default_position
+                # calculate the escaped time since in this position
+
+    def check_balance(self):
+        balance = self.browser.find_element_by_css_selector(
+            '.sc-manage-edit-price-dialog span[data-role="span-balance"]').text
+        if self.balance is None:
+            self.balance = balance
+        elif self.balance != balance:
+            diff = format(float(self.balance) - float(balance), '.2f')
+            self.balance = balance
+
+            time_str = arrow.now().format('YYYY-MM-DD HH:mm:ss')
+            date_str = time_str.split(' ')[0]
+            root = self.market['directory'] + '_config'
+            fn = 'p4p_balance_change_history_'+date_str+'.json.gz'
+            JSON.serialize([time_str, diff], root, [], fn, append=True)
+
+    def next_page(self):
+        success = True
+        while True:
+            try:
+                btn_next = self.browser.find_element_by_css_selector('.bp-table-footer a.next')
+                ActionChains(self.browser).move_to_element(btn_next).perform()
+                css_selector = "div.keyword-manage .bp-table-main-wraper>table tbody tr:first-child"
+                tr = self.browser.find_element_by_css_selector(css_selector)
+                self.click(btn_next)
+                WebDriverWait(self.browser, 15).until(EC.staleness_of(tr))
+                self.browser.find_element_by_tag_name('body').send_keys(Keys.CONTROL + Keys.HOME)
+                break
+            except NoSuchElementException as e:
+                success = False
+                break
+            except ElementNotVisibleException as e:
+                success = False
+                break
+            except StaleElementReferenceException as e:
+                self.browser.implicitly_wait(1)
+                continue
+        print('next_page:', success)
+        return success
+
+    def set_price(self, tr=None, position=None, price=None):
+        if not position and not price:
+            return
+
+        # pos = 3
+        max_price = 30
+        # sum = 0
+        # id = tr.find_element_by_css_selector('td:first-child input').get_attribute('value').strip()
+        # for prices in self.recent_prices[id]:
+        #     sum += float(prices[pos])
+        # mean_price = sum/len(self.recent_prices[id])
+        # if max_price > (mean_price + 0.1):
+        #     max_price = (mean_price + 0.1)
+
+        if tr and not self.open_price_dialog(tr):
+            return False
+
+        success = True
+        WebDriverWait(self.browser, 15).until(
+            EC.invisibility_of_element_located((By.CSS_SELECTOR, 'div.bp-loading-panel')))
+        while True:
+            try:
+                price_table_tbody_selector = ".sc-manage-edit-price-dialog table tbody,.sc-manage-edit-price-dialog p.util-clearfix"
+                price_table_tbody = WebDriverWait(self.browser, 15).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, price_table_tbody_selector)))
+
+                if price_table_tbody.tag_name == 'p':
+                    success = False
+                    break
+
+                if price:
+                    css_selector = '.sc-manage-edit-price-dialog span[data-role="span-baseprice"'
+                    min_price = float(self.browser.find_element_by_css_selector(css_selector).text)
+                    if price < min_price:
+                        price = min_price
+
+                    js_templ = "document.querySelector('{selector}').value = '{value}';"
+                    css_selector = '.sc-manage-edit-price-dialog input[name="addPrice"]'
+                    js = js_templ.format(selector=css_selector, value=price)
+                    self.browser.execute_script(js)
+                else:
+                    while True:
+                        btn = price_table_tbody.find_element_by_css_selector(
+                            'td:nth-child(' + str(int(position) + 1) + ') a, td:last-child a')
+                        p = btn.text.strip()
+                        cp = self.browser.find_element_by_css_selector(
+                            '.sc-manage-edit-price-dialog input[name="addPrice"]').get_attribute('value')
+
+                        if cp == p:
+                            webdriver.ActionChains(self.browser).send_keys(Keys.ESCAPE).perform()
+                            print('不需要改变价格', end=' > ')
+                            return success
+                        if float(p) <= max_price:
+                            self.click(btn)
+                            break
+                        if position >= 5:
+                            break
+                        position += 1
+
+                confirm = self.browser.find_element_by_css_selector('.ui2-dialog-btn input[data-role="confirm"]')
+                self.click(confirm)
+                break
+            except StaleElementReferenceException:
+                self.browser.implicitly_wait(0.5)
+                continue
+        return success
+
+    def is_on(self, tr):
+        i = tr.find_element_by_css_selector('td.bp-cell-status .bp-dropdown-main i')
+        if i.get_attribute('class').split('-').pop() == 'start':
+            return True
+        else:
+            return False
+
+    def turn_on(self, tr):
+        td = tr.find_element_by_css_selector('td:nth-child(2)')
+        self.click(td)
+        css_selector = '.bp-table>div.bp-dropdown-hover li.bp-status-start'
+        btn_start = WebDriverWait(self.browser, 15).until(EC.visibility_of_element_located((By.CSS_SELECTOR, css_selector)))
+        self.click(btn_start)
+        self.browser.implicitly_wait(1)
+        WebDriverWait(self.browser, 15).until(EC.invisibility_of_element_located((By.CSS_SELECTOR, 'div.bp-loading-panel')))
+        
+    def turn_off(self, tr):
+        td = tr.find_element_by_css_selector('td:nth-child(2)')
+        self.click(td)
+        css_selector = '.bp-table>div.bp-dropdown-hover li.bp-status-stop'
+        btn_stop = WebDriverWait(self.browser, 15).until(EC.visibility_of_element_located((By.CSS_SELECTOR, css_selector)))
+        self.click(btn_stop)
+        self.browser.implicitly_wait(1)
+        WebDriverWait(self.browser, 15).until(EC.invisibility_of_element_located((By.CSS_SELECTOR, 'div.bp-loading-panel')))
+
+    def click(self, btn):
+        while True:
+            try:
+                btn.click()
+                break
+            except WebDriverException as e:
+                if 'is not clickable at point' in str(e):
+                    self.browser.implicitly_wait(0.5)
+                    continue
+                else:
+                    raise e
+
+    def turn_all_off(self, group='all', monitored=True, tid=None, socketio=None, tasks=None):
+        if tid:
+            tasks[tid]['is_running'] = True
+            msg = {'name': 'P4P.turn_all_off', 'tid': tid, 'group': group, 'monitored': monitored, 'is_last_run': tasks[tid]['is_last_run']}
+            socketio.emit('event_task_start_running', msg, namespace='/markets', broadcast=True)
+        try:
+            if tid:
+                tasks[tid]['progress'] = 1
+                socketio.emit('event_task_progress', {'tid': tid, 'progress': 1}, namespace='/markets', broadcast=True)
+            with self.lock:
+                self.load_url()
+                if tid:
+                    tasks[tid]['progress'] = 2
+                    socketio.emit('event_task_progress', {'tid': tid, 'progress': 2}, namespace='/markets', broadcast=True)
+                all_kws_count = int(self.browser.find_element_by_css_selector('a.all-kwcount span').text)
+
+                kws_count = 0
+                while True:
+                    css_selector = "div.keyword-manage .bp-table-main-wraper>table"
+                    table = self.browser.find_element_by_css_selector(css_selector)
+
+                    trs = table.find_elements_by_css_selector('tbody tr')
+
+                    selected = False
+                    for tr in trs:
+                        kws_count += 1
+                        if tid:
+                            tasks[tid]['progress'] = int(kws_count/all_kws_count*97)+3
+                            socketio.emit('event_task_progress', {'tid': tid, 'progress': tasks[tid]['progress']}, namespace='/markets', broadcast=True)
+                        id = tr.find_element_by_css_selector('td:first-child input').get_attribute('value').strip()
+                        if monitored and id not in self.keywords_list['monitor']:
+                            continue
+
+                        if group != 'all':
+                            if group != tr.find_element_by_css_selector('td:nth-child(4)').text.strip():
+                                continue
+
+                        if self.is_on(tr):
+                            tr.find_element_by_css_selector("td:first-child input").click()
+                            selected = True
+
+                    if selected:
+                        css_selector = '.bp-table .toolbar a[data-role="btn-pause"]'
+                        btn_pause = self.browser.find_element_by_css_selector(css_selector)
+                        self.click(btn_pause)
+
+                        self.browser.implicitly_wait(1)
+                        WebDriverWait(self.browser, 15).until(EC.invisibility_of_element_located((By.CSS_SELECTOR, 'div.bp-loading-panel')))
+                    
+                    time.sleep(10)
+                    if not self.next_page():
+                        break
+            if tid:
+                tasks[tid]['progress'] = 100
+                socketio.emit('event_task_progress', {'tid': tid, 'progress': 100}, namespace='/markets', broadcast=True)
+        except Exception as e:
+            print('Error: ', e)
+            traceback.print_exc()
+        finally:
+            self.kws_tracking = {}
+            if tid:
+                tasks[tid]['is_running'] = False
+                tasks[tid]['progress'] = 0
+                if tasks[tid]['is_last_run']:
+                    del tasks[tid]
+                    socketio.emit('event_task_last_run_finished', {'tid': tid}, namespace='/markets', broadcast=True)
+
+    # def find_prices(self, tr=None, close=True):  # @redo: 相关度不足，无法进入搜索前5名。
+    #     if tr and not self.open_price_dialog(tr):
+    #         return []
+    #
+    #     prices = []
+    #     WebDriverWait(self.browser, 15).until(
+    #         EC.invisibility_of_element_located((By.CSS_SELECTOR, 'div.bp-loading-panel')))
+    #
+    #     while True:
+    #         try:
+    #             price_table_tbody_selector = ".sc-manage-edit-price-dialog table tbody,.sc-manage-edit-price-dialog p.util-clearfix"
+    #             price_table_tbody = WebDriverWait(self.browser, 15).until(
+    #                 EC.presence_of_element_located((By.CSS_SELECTOR, price_table_tbody_selector)))
+    #
+    #             if price_table_tbody.tag_name == 'p':
+    #                 prices = None
+    #                 break
+    #
+    #             for btn in price_table_tbody.find_elements_by_css_selector('a'):
+    #                 price = btn.text.strip()
+    #                 float(price)
+    #                 prices.append(price)
+    #
+    #             print(prices, end=">")
+    #
+    #             self.check_balance()
+    #             break
+    #         except StaleElementReferenceException:
+    #             self.browser.implicitly_wait(0.5)
+    #             continue
+    #         except ValueError:
+    #             prices = []
+    #             break
+    #     if close:
+    #         webdriver.ActionChains(self.browser).send_keys(Keys.ESCAPE).perform()
+    #     return prices
 
     # def find_sponsors_backup(self, kws):
     #     with self.lock:
@@ -472,299 +891,3 @@ class P4P():
     #
     #     return {'top_sponsor': top_sponsor, 'sponsor_list': sponsor_list}
 
-    def load_url(self):
-        while True:
-            try:
-                if self.browser is None:
-                    self.logger.info('open browser and login')
-                    alibaba = Alibaba(self.lid, self.lpwd, None, None, None)
-                    alibaba.login()
-                    self.browser = alibaba.browser
-                    self.alibaba = alibaba
-
-                self.browser.get(self.api)
-                if 'login.alibaba.com' in self.browser.current_url:
-                    self.logger.info('Was out, login again!')
-                    self.alibaba.login()
-                    self.browser.get(self.api)
-
-                WebDriverWait(self.browser, 15).until(
-                    EC.invisibility_of_element_located((By.CSS_SELECTOR, 'div.bp-loading-panel')))
-
-                # try to close all follow-me-popups
-                while True:
-                    btn_close = self.browser.find_elements_by_css_selector('div.follow-me-close')
-                    if btn_close:
-                        webdriver.ActionChains(self.browser).send_keys(Keys.ESCAPE).perform()
-                        # wait 1 second to see if new popup commes
-                        self.browser.implicitly_wait(1)
-                        continue
-                    else:
-                        break
-                break
-            except WebDriverException as e:
-                if 'chrome not reachable' in str(e):
-                    self.logger.info('Browser Window was closed! Try to open a new browser window.')
-                    self.browser = None
-                continue
-
-    def open_price_dialog(self, tr):
-        success = True
-        btn = tr.find_element_by_css_selector('td:nth-child(5) a')
-        # self.browser.implicitly_wait(1)
-        WebDriverWait(self.browser, 15).until(EC.invisibility_of_element_located((By.CSS_SELECTOR, 'div.ui-mask')))
-        self.click(btn)
-
-        checkbox = tr.find_element_by_css_selector('td:first-child input')
-        if checkbox.is_selected():
-            checkbox.click()
-            success = False
-        return success
-
-    def find_sponsor_list_position(self, kws=None, sponsors=None):
-        if not kws and not sponsors:
-            raise Exception('kws and sponsors can\'t be None at the same time')
-
-        if kws:
-            sponsors = self.find_sponsors(kws)
-            sponsor_list = sponsors['sponsor_list']
-        elif sponsors:
-            sponsor_list = sponsors
-        
-        idx = 0
-        count = 0
-        for sponsor in sponsor_list:
-            count += 1
-            if "glittereyelash.en.alibaba.com" in sponsor['url']:
-                idx = count
-                break
-        return idx
-
-    def find_prices(self, tr=None):  # @redo: 相关度不足，无法进入搜索前5名。
-        if tr and not self.open_price_dialog(tr):
-            return []
-
-        prices = []
-        WebDriverWait(self.browser, 15).until(
-            EC.invisibility_of_element_located((By.CSS_SELECTOR, 'div.bp-loading-panel')))
-
-        while True:
-            try:
-                price_table_tbody_selector = ".sc-manage-edit-price-dialog table tbody,.sc-manage-edit-price-dialog p.util-clearfix"
-                price_table_tbody = WebDriverWait(self.browser, 15).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, price_table_tbody_selector)))
-
-                if price_table_tbody.tag_name == 'p':
-                    prices = None
-                    break
-
-                for btn in price_table_tbody.find_elements_by_css_selector('a'):
-                    price = btn.text.strip()
-                    float(price)
-                    prices.append(price)
-
-                print(prices, end=">")
-
-                self.check_balance()
-                break
-            except StaleElementReferenceException:
-                self.browser.implicitly_wait(0.5)
-                continue
-            except ValueError:
-                prices = []
-                break
-        webdriver.ActionChains(self.browser).send_keys(Keys.ESCAPE).perform()
-        return prices
-
-    def check_balance(self):
-        balance = self.browser.find_element_by_css_selector(
-            '.sc-manage-edit-price-dialog span[data-role="span-balance"]').text
-        if self.balance is None:
-            self.balance = balance
-        elif self.balance != balance:
-            diff = format(float(self.balance) - float(balance), '.2f')
-            self.balance = balance
-
-            time_str = arrow.now().format('YYYY-MM-DD HH:mm:ss')
-            date_str = time_str.split(' ')[0]
-            root = self.market['directory'] + '_config'
-            fn = 'p4p_balance_change_history_'+date_str+'.json.gz'
-            JSON.serialize([time_str, diff], root, [], fn, append=True)
-
-    def next_page(self):
-        success = True
-        while True:
-            try:
-                btn_next = self.browser.find_element_by_css_selector('.bp-table-footer a.next')
-                ActionChains(self.browser).move_to_element(btn_next).perform()
-                css_selector = "div.keyword-manage .bp-table-main-wraper>table tbody tr:first-child"
-                tr = self.browser.find_element_by_css_selector(css_selector)
-                self.click(btn_next)
-                WebDriverWait(self.browser, 15).until(EC.staleness_of(tr))
-                self.browser.find_element_by_tag_name('body').send_keys(Keys.CONTROL + Keys.HOME)
-                break
-            except NoSuchElementException as e:
-                success = False
-                break
-            except ElementNotVisibleException as e:
-                success = False
-                break
-            except StaleElementReferenceException as e:
-                self.browser.implicitly_wait(1)
-                continue
-        print('next_page:', success)
-        return success
-
-    def set_price(self, tr, position=None, price=None):
-        if not position and not price:
-            return
-
-        # pos = 3
-        max_price = 30
-        # sum = 0
-        # id = tr.find_element_by_css_selector('td:first-child input').get_attribute('value').strip()
-        # for prices in self.recent_prices[id]:
-        #     sum += float(prices[pos])
-        # mean_price = sum/len(self.recent_prices[id])
-        # if max_price > (mean_price + 0.1):
-        #     max_price = (mean_price + 0.1)
-
-        if not self.open_price_dialog(tr):
-            return False
-        
-        success = True
-        WebDriverWait(self.browser, 15).until(EC.invisibility_of_element_located((By.CSS_SELECTOR, 'div.bp-loading-panel')))
-        while True:
-            try:
-                price_table_tbody_selector = ".sc-manage-edit-price-dialog table tbody,.sc-manage-edit-price-dialog p.util-clearfix"
-                price_table_tbody = WebDriverWait(self.browser, 15).until(EC.presence_of_element_located((By.CSS_SELECTOR, price_table_tbody_selector)))
-
-                if price_table_tbody.tag_name == 'p':
-                    success = False
-                    break
-
-                if price:
-                    css_selector = '.sc-manage-edit-price-dialog span[data-role="span-baseprice"'
-                    min_price = float(self.browser.find_element_by_css_selector(css_selector).text)
-                    if price < min_price:
-                        price = min_price
-                        
-                    js_templ = "document.querySelector('{selector}').value = '{value}';"
-                    css_selector = '.sc-manage-edit-price-dialog input[name="addPrice"]'
-                    js = js_templ.format(selector=css_selector, value=price)
-                    self.browser.execute_script(js)
-                else:
-                    while True:
-                        btn = price_table_tbody.find_element_by_css_selector('td:nth-child('+str(int(position)+1)+') a, td:last-child a')
-                        p = float(btn.text.strip())
-                        if p <= max_price:
-                            self.click(btn)
-                            break
-                        if position >= 5:
-                            break
-                        position += 1
-                
-                confirm = self.browser.find_element_by_css_selector('.ui2-dialog-btn input[data-role="confirm"]')
-                self.click(confirm)
-                break
-            except StaleElementReferenceException:
-                self.browser.implicitly_wait(0.5)
-                continue
-        return success
-
-    def is_on(self, tr):
-        i = tr.find_element_by_css_selector('td.bp-cell-status .bp-dropdown-main i')
-        if i.get_attribute('class').split('-').pop() == 'start':
-            return True
-        else:
-            return False
-
-    def turn_on(self, tr):
-        td = tr.find_element_by_css_selector('td:nth-child(2)')
-        self.click(td)
-        css_selector = '.bp-table>div.bp-dropdown-hover li.bp-status-start'
-        btn_start = WebDriverWait(self.browser, 15).until(EC.visibility_of_element_located((By.CSS_SELECTOR, css_selector)))
-        self.click(btn_start)
-        self.browser.implicitly_wait(1)
-        WebDriverWait(self.browser, 15).until(EC.invisibility_of_element_located((By.CSS_SELECTOR, 'div.bp-loading-panel')))
-        
-    def turn_off(self, tr):
-        td = tr.find_element_by_css_selector('td:nth-child(2)')
-        self.click(td)
-        css_selector = '.bp-table>div.bp-dropdown-hover li.bp-status-stop'
-        btn_stop = WebDriverWait(self.browser, 15).until(EC.visibility_of_element_located((By.CSS_SELECTOR, css_selector)))
-        self.click(btn_stop)
-        self.browser.implicitly_wait(1)
-        WebDriverWait(self.browser, 15).until(EC.invisibility_of_element_located((By.CSS_SELECTOR, 'div.bp-loading-panel')))
-
-    def click(self, btn):
-        while True:
-            try:
-                btn.click()
-                break
-            except WebDriverException as e:
-                if 'is not clickable at point' in str(e):
-                    self.browser.implicitly_wait(0.5)
-                    continue
-                else:
-                    raise e
-
-    def turn_all_off(self, group='all', monitored=True, tid=None, socketio=None, tasks=None):
-        tasks[tid]['is_running'] = True
-        msg = {'name': 'P4P.turn_all_off', 'tid': tid, 'group': group, 'monitored': monitored, 'is_last_run': tasks[tid]['is_last_run']}
-        socketio.emit('event_task_start_running', msg, namespace='/markets', broadcast=True)
-        try:
-            tasks[tid]['progress'] = 1
-            socketio.emit('event_task_progress', {'tid': tid, 'progress': 1}, namespace='/markets', broadcast=True)
-            with self.lock:
-                self.load_url()
-                tasks[tid]['progress'] = 2
-                socketio.emit('event_task_progress', {'tid': tid, 'progress': 2}, namespace='/markets', broadcast=True)
-                all_kws_count = int(self.browser.find_element_by_css_selector('a.all-kwcount span').text)
-
-                kws_count = 0
-                while True:
-                    css_selector = "div.keyword-manage .bp-table-main-wraper>table"
-                    table = self.browser.find_element_by_css_selector(css_selector)
-
-                    trs = table.find_elements_by_css_selector('tbody tr')
-
-                    selected = False
-                    for tr in trs:
-                        kws_count += 1
-                        tasks[tid]['progress'] = int(kws_count/all_kws_count*97)+3
-                        socketio.emit('event_task_progress', {'tid': tid, 'progress': tasks[tid]['progress']}, namespace='/markets', broadcast=True)
-                        id = tr.find_element_by_css_selector('td:first-child input').get_attribute('value').strip()
-                        if monitored and id not in self.keywords_list['monitor']:
-                            continue
-
-                        if group != 'all':
-                            if group != tr.find_element_by_css_selector('td:nth-child(4)').text.strip():
-                                continue
-
-                        if self.is_on(tr):
-                            tr.find_element_by_css_selector("td:first-child input").click()
-                            selected = True
-
-                    if selected:
-                        css_selector = '.bp-table .toolbar a[data-role="btn-pause"]'
-                        btn_pause = self.browser.find_element_by_css_selector(css_selector)
-                        self.click(btn_pause)
-
-                        self.browser.implicitly_wait(1)
-                        WebDriverWait(self.browser, 15).until(EC.invisibility_of_element_located((By.CSS_SELECTOR, 'div.bp-loading-panel')))
-                    
-                    time.sleep(10)
-                    if not self.next_page():
-                        break
-            tasks[tid]['progress'] = 100
-            socketio.emit('event_task_progress', {'tid': tid, 'progress': 100}, namespace='/markets', broadcast=True)
-        except Exception as e:
-            print('Error: ', e)
-            traceback.print_exc()
-        finally:
-            tasks[tid]['is_running'] = False
-            tasks[tid]['progress'] = 0
-            if tasks[tid]['is_last_run']:
-                del tasks[tid]
-                socketio.emit('event_task_last_run_finished', {'tid': tid}, namespace='/markets', broadcast=True)
