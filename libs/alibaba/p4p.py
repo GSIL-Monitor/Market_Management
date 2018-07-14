@@ -15,14 +15,12 @@ from selenium.webdriver.common.action_chains import ActionChains
 import pendulum
 import arrow
 from datetime import datetime
-from bs4 import BeautifulSoup
 from pyquery import PyQuery as pq
 
 import json
 import requests
 import time
 import re
-import math
 
 import traceback
 import threading
@@ -122,7 +120,7 @@ class P4P():
                     kws['id'] = pq(tr).find('td:first-child input').val()
                     kws['status'] = pq(tr).find('td.bp-cell-status .bp-dropdown-main i').attr('class').split('-').pop()
                     kws['kws'] = pq(tr).find('td.bp-cell-left').text().strip()
-                    kws['group'] = pq(tr).find('td[data-role="table-col-tag"]').text().strip()
+                    groups = pq(tr).find('td[data-role="table-col-tag"]').text().strip()
                     kws['my_price'] = pq(tr).find('td:nth-child(5) a').text().strip()
                     kws['average_price'] = pq(tr).find('td:nth-child(6)').text().strip()
                     string = pq(tr).find('span.qs-star-wrap i').attr('class')
@@ -131,7 +129,11 @@ class P4P():
                     kws['search_count'] = re.search(':(\d+%)',string).group(1)
                     string = pq(tr).find('.bp-icon-progress-blue').html()
                     kws['buy_count'] = re.search(':(\d+%)',string).group(1)
-                    keywords.append(kws)
+                    for grp in groups.split(','):
+                        group = grp.strip()
+                        obj = kws.copy()
+                        obj['group'] = group
+                        keywords.append(obj)
 
                 if not self.next_page():
                     break
@@ -159,96 +161,58 @@ class P4P():
                     tasks[tid]['progress'] = 2
                     socketio.emit('event_task_progress', {'tid': tid, 'progress': 2}, namespace='/markets',
                                   broadcast=True)
-                all_kws_count = int(self.browser.find_element_by_css_selector('a.all-kwcount span').text)
+                # all_kws_count = int(self.browser.find_element_by_css_selector('a.all-kwcount span').text)
+                all_kws_count = self.switch_to_group(group)
 
                 kws_count = 0
                 while True:
-                    table_reloaded = True
                     css_selector = "div.keyword-manage .bp-table-main-wraper>table"
                     table = self.browser.find_element_by_css_selector(css_selector)
-                    # print(self.keywords_list['recording'])
-                    idx = 0
-                    while True:
+
+                    trs = table.find_elements_by_css_selector('tbody tr')
+
+                    has_checked = False
+                    for idx, tr in enumerate(trs):
                         kws_count += 1
                         if tid:
                             tasks[tid]['progress'] = int(kws_count / all_kws_count * 97) + 3
                             socketio.emit('event_task_progress', {'tid': tid, 'progress': tasks[tid]['progress']},
                                           namespace='/markets', broadcast=True)
 
-                        print(table_reloaded, end=" > ")
-                        if table_reloaded:
-                            trs = table.find_elements_by_css_selector('tbody tr')
-                            table_reloaded = False
-
                         print('index:', idx, len(trs), end=' > ')
-                        if idx >= len(trs):
-                            print('')
-                            break
-
-                        try:
-                            tr = trs[idx]
-                            id = tr.find_element_by_css_selector('td:first-child input').get_attribute('value').strip()
-                            if id not in self.keywords_list['recording']:
-                                print('skipped_not_in_recording')
-                                idx += 1
-                                continue
-
-                            grp = tr.find_element_by_css_selector('td:nth-child(4)').text.strip()
-                            if group != 'all':
-                                if group != grp:
-                                    print('skipped_not_in_group', group, grp)
-                                    idx += 1
-                                    continue
-
-                            dt = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                            kws = tr.find_element_by_css_selector('td:nth-child(3)').text.strip()
-
-                            print(kws, end=' > ')
-
-                            if not self.open_price_dialog(tr):
-                                print('skipped_2')
-                                idx += 1
-                                continue
-
-                            [prices, sponsors] = self.find_prices_and_sponsors()
-
-                            # sponsors = self.find_sponsors(kws)
-                            #
-                            # # @redo: retry to fetch prices
-                            # prices = []
-                            # count = 0
-                            # while count < 10:
-                            #     if count == 0:
-                            #         prices = self.find_prices()
-                            #     elif count <= 5:
-                            #         prices = self.find_prices(tr)
-                            #     else:
-                            #         prices = ['0', '0', '0', '0', '0', '0']
-                            #         print('failed to get prices, using default zero values')
-                            #         break
-                            #
-                            #     if prices is None:
-                            #         break
-                            #
-                            #     if len(prices) != 0:
-                            #         break
-                            #     count += 1
-                            #     time.sleep(5)
-
-                            if prices:
-                                keywords.append([dt, id, kws, grp, prices, sponsors])
-                                if (id not in self.recent_prices):
-                                    self.recent_prices[id] = []
-                                self.recent_prices[id].append(prices)
-                                if len(self.recent_prices[id]) > 5:
-                                    self.recent_prices[id].pop(0)
-
-                            idx += 1
-                            print(' >>>>>> successful end ')
-                        except StaleElementReferenceException as e:
-                            table_reloaded = True
-                            print(' >>>>>> failed ... .... , retry .... ...')
+                        ActionChains(self.browser).move_to_element(tr).perform()
+                        id = tr.find_element_by_css_selector('td:first-child input').get_attribute('value').strip()
+                        if id not in self.keywords_list['recording']:
+                            print('skipped_not_in_recording')
                             continue
+
+                        grp = tr.find_element_by_css_selector('td:nth-child(4)').text.strip()
+                        if group != 'all':
+                            if group not in grp:
+                                print('skipped_not_in_group', group, grp)
+                                continue
+
+                        dt = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                        kws = tr.find_element_by_css_selector('td:nth-child(3)').text.strip()
+
+                        print(kws, end=' > ')
+
+                        if not self.open_price_dialog(tr):
+                            print('skipped_2')
+                            continue
+
+                        [prices, sponsors] = self.find_prices_and_sponsors()
+
+                        if prices:
+                            keywords.append([dt, id, kws, grp, prices, sponsors])
+
+                            if (id not in self.recent_prices):
+                                self.recent_prices[id] = []
+                            self.recent_prices[id].append(prices)
+                            if len(self.recent_prices[id]) > 5:
+                                self.recent_prices[id].pop(0)
+
+                        print(' >>>>>> successful end ')
 
                     if not self.next_page():
                         break
@@ -289,81 +253,79 @@ class P4P():
                     tasks[tid]['progress'] = 2
                     socketio.emit('event_task_progress', {'tid': tid, 'progress': 2}, namespace='/markets',
                                   broadcast=True)
-                all_kws_count = int(self.browser.find_element_by_css_selector('a.all-kwcount span').text)
-
+                # all_kws_count = int(self.browser.find_element_by_css_selector('a.all-kwcount span').text)
+                print('switch to group:', group)
+                all_kws_count = self.switch_to_group(group)
+                #             time.sleep(5)
                 kws_count = 0
                 while True:
-                    table_reloaded = True
                     css_selector = "div.keyword-manage .bp-table-main-wraper>table"
                     table = self.browser.find_element_by_css_selector(css_selector)
-                    print(self.keywords_list['monitor'])
-                    idx = 0
-                    while True:
+
+                    trs = table.find_elements_by_css_selector('tbody tr')
+
+                    has_checked = False
+                    for idx, tr in enumerate(trs):
                         kws_count += 1
                         if tid:
                             tasks[tid]['progress'] = int(kws_count / all_kws_count * 97) + 3
                             socketio.emit('event_task_progress', {'tid': tid, 'progress': tasks[tid]['progress']},
                                           namespace='/markets', broadcast=True)
 
-                        print(table_reloaded, end=" > ")
-                        if table_reloaded:
-                            trs = table.find_elements_by_css_selector('tbody tr')
-                            table_reloaded = False
-
                         print('index:', idx, len(trs), end=' > ')
-                        if idx >= len(trs):
-                            print('')
-                            break
-
-                        try:
-                            tr = trs[idx]
-                            ActionChains(self.browser).move_to_element(tr).perform()
-                            id = tr.find_element_by_css_selector('td:first-child input').get_attribute('value').strip()
-                            if id not in self.keywords_list['monitor']:
-                                print('skipped_not_in_monitoring')
-                                idx += 1
-                                continue
-
-                            grp = tr.find_element_by_css_selector('td:nth-child(4)').text.strip()
-                            if group != 'all':
-                                if group != grp:
-                                    print('skipped_not_in_group', group, grp)
-                                    idx += 1
-                                    continue
-
-                            dt = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                            kws = tr.find_element_by_css_selector('td:nth-child(3)').text.strip()
-
-                            print(kws, end=' > ')
-
-                            if not self.open_price_dialog(tr):
-                                print('skipped_2')
-                                idx += 1
-                                continue
-
-                            [prices, sponsors] = self.find_prices_and_sponsors(close=False)
-
-                            if prices:
-                                keywords.append([dt, id, kws, grp, prices, sponsors])
-
-                            current_position = self.find_sponsor_list_position(sponsors=sponsors['sponsor_list'])
-                            click_position = self.get_click_position(id, current_position)
-
-                            if click_position != -1:
-                                self.set_price(position=click_position)
-                            else:
-                                webdriver.ActionChains(self.browser).send_keys(Keys.ESCAPE).perform()
-                            if not self.is_on(tr):
-                                print('turn_on', end=" > ")
-                                self.turn_on(tr)
-                                table_reloaded = True
-
-                            idx += 1
-                            print(' >>>>>> successful end ')
-                        except StaleElementReferenceException as e:
-                            table_reloaded = True
-                            print(' >>>>>> failed ... .... , retry .... ...')
+                        ActionChains(self.browser).move_to_element(tr).perform()
+                        id = tr.find_element_by_css_selector('td:first-child input').get_attribute('value').strip()
+                        if id not in self.keywords_list['monitor']:
+                            print('skipped_not_in_monitoring')
                             continue
+
+                        grp = tr.find_element_by_css_selector('td:nth-child(4)').text.strip()
+                        if group != 'all':
+                            if group not in grp:
+                                print('skipped_not_in_group', group, grp)
+                                continue
+
+                        dt = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                        kws = tr.find_element_by_css_selector('td:nth-child(3)').text.strip()
+
+                        print(kws, end=' > ')
+
+                        if not self.open_price_dialog(tr):
+                            print('skipped_2')
+                            continue
+
+                        [prices, sponsors] = self.find_prices_and_sponsors(close=False)
+
+                        if prices:
+                            keywords.append([dt, id, kws, grp, prices, sponsors])
+
+                        current_position = self.find_sponsor_list_position(sponsors=sponsors['sponsor_list'])
+                        click_position = self.get_click_position(id, current_position)
+
+                        if click_position != -1:
+                            self.set_price(position=click_position)
+                        else:
+                            webdriver.ActionChains(self.browser).send_keys(Keys.ESCAPE).perform()
+
+                        WebDriverWait(self.browser, 15).until(
+                            EC.invisibility_of_element_located((By.CSS_SELECTOR, 'div.ui-mask')))
+
+                        if not self.is_on(tr):
+                            print('make selected', end=" > ")
+                            tr.find_element_by_css_selector("td:first-child input").click()
+                            has_checked = True
+
+                        print(' >>>>>> successful end ')
+
+                    if has_checked:
+                        css_selector = '.bp-table .toolbar a[data-role="btn-start"]'
+                        btn_start = self.browser.find_element_by_css_selector(css_selector)
+                        self.click(btn_start)
+                        print('switch selected on.')
+
+                        self.browser.implicitly_wait(1)
+                        WebDriverWait(self.browser, 15).until(
+                            EC.invisibility_of_element_located((By.CSS_SELECTOR, 'div.bp-loading-panel')))
 
                     if not self.next_page():
                         break
@@ -427,16 +389,37 @@ class P4P():
                     self.browser = None
                 continue
 
+    def switch_to_group(self, group='all'):
+        if group == "all":
+            return int(self.browser.find_element_by_css_selector('a.all-kwcount span').text)
+        group_list = self.browser.find_elements_by_css_selector('div.keyword-group ul.group-list li')
+        group_li = None
+
+        for li in group_list:
+            grp = li.get_attribute('data-name')
+            if grp == group:
+                group_li = li
+                break
+
+        count = 0
+        if group_li:
+            count = int(re.search('\((\d+)\)', group_li.text).group(1))
+            group_li.click()
+            WebDriverWait(self.browser, 15).until(
+                EC.invisibility_of_element_located((By.CSS_SELECTOR, 'div.bp-loading-panel')))
+        return count
+
     def open_price_dialog(self, tr):
         success = True
         btn = tr.find_element_by_css_selector('td:nth-child(5) a')
-        # self.browser.implicitly_wait(1)
-        WebDriverWait(self.browser, 15).until(EC.invisibility_of_element_located((By.CSS_SELECTOR, 'div.ui-mask')))
-
         self.click(btn)
 
         WebDriverWait(self.browser, 15).until(
+            EC.visibility_of_element_located((By.CSS_SELECTOR, 'div.ui-mask')))
+
+        WebDriverWait(self.browser, 15).until(
             EC.invisibility_of_element_located((By.CSS_SELECTOR, 'div.bp-loading-panel')))
+
 
         checkbox = tr.find_element_by_css_selector('td:first-child input')
         if checkbox.is_selected():
@@ -540,9 +523,10 @@ class P4P():
         
         idx = -1
         count = 0
+        homepage = re.search('([^\/]+\.en\.alibaba\.com)', self.market['homepage']).group(1)
         for sponsor in sponsor_list:
             count += 1
-            if "glittereyelash.en.alibaba.com" in sponsor['url']:
+            if homepage in sponsor['url']:
                 idx = count
                 break
         return idx
@@ -629,7 +613,7 @@ class P4P():
             return
 
         # pos = 3
-        max_price = 30
+        max_price = 31
         # sum = 0
         # id = tr.find_element_by_css_selector('td:first-child input').get_attribute('value').strip()
         # for prices in self.recent_prices[id]:
@@ -731,7 +715,8 @@ class P4P():
     def turn_all_off(self, group='all', monitored=True, tid=None, socketio=None, tasks=None):
         if tid:
             tasks[tid]['is_running'] = True
-            msg = {'name': 'P4P.turn_all_off', 'tid': tid, 'group': group, 'monitored': monitored, 'is_last_run': tasks[tid]['is_last_run']}
+            msg = {'name': 'P4P.turn_all_off', 'tid': tid, 'group': group, 'monitored': monitored,
+                   'is_last_run': tasks[tid]['is_last_run']}
             socketio.emit('event_task_start_running', msg, namespace='/markets', broadcast=True)
         try:
             if tid:
@@ -741,9 +726,10 @@ class P4P():
                 self.load_url()
                 if tid:
                     tasks[tid]['progress'] = 2
-                    socketio.emit('event_task_progress', {'tid': tid, 'progress': 2}, namespace='/markets', broadcast=True)
-                all_kws_count = int(self.browser.find_element_by_css_selector('a.all-kwcount span').text)
-
+                    socketio.emit('event_task_progress', {'tid': tid, 'progress': 2}, namespace='/markets',
+                                  broadcast=True)
+                #             all_kws_count = int(self.browser.find_element_by_css_selector('a.all-kwcount span').text)
+                all_kws_count = self.switch_to_group(group)
                 kws_count = 0
                 while True:
                     css_selector = "div.keyword-manage .bp-table-main-wraper>table"
@@ -755,14 +741,16 @@ class P4P():
                     for tr in trs:
                         kws_count += 1
                         if tid:
-                            tasks[tid]['progress'] = int(kws_count/all_kws_count*97)+3
-                            socketio.emit('event_task_progress', {'tid': tid, 'progress': tasks[tid]['progress']}, namespace='/markets', broadcast=True)
+                            tasks[tid]['progress'] = int(kws_count / all_kws_count * 97) + 3
+                            socketio.emit('event_task_progress', {'tid': tid, 'progress': tasks[tid]['progress']},
+                                          namespace='/markets', broadcast=True)
                         id = tr.find_element_by_css_selector('td:first-child input').get_attribute('value').strip()
                         if monitored and id not in self.keywords_list['monitor']:
                             continue
 
                         if group != 'all':
-                            if group != tr.find_element_by_css_selector('td:nth-child(4)').text.strip():
+                            grp = tr.find_element_by_css_selector('td:nth-child(4)').text.strip()
+                            if group not in grp:
                                 continue
 
                         if self.is_on(tr):
@@ -775,14 +763,15 @@ class P4P():
                         self.click(btn_pause)
 
                         self.browser.implicitly_wait(1)
-                        WebDriverWait(self.browser, 15).until(EC.invisibility_of_element_located((By.CSS_SELECTOR, 'div.bp-loading-panel')))
-                    
-                    time.sleep(10)
+                        WebDriverWait(self.browser, 15).until(
+                            EC.invisibility_of_element_located((By.CSS_SELECTOR, 'div.bp-loading-panel')))
+
                     if not self.next_page():
                         break
             if tid:
                 tasks[tid]['progress'] = 100
-                socketio.emit('event_task_progress', {'tid': tid, 'progress': 100}, namespace='/markets', broadcast=True)
+                socketio.emit('event_task_progress', {'tid': tid, 'progress': 100}, namespace='/markets',
+                              broadcast=True)
         except Exception as e:
             print('Error: ', e)
             traceback.print_exc()

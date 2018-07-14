@@ -55,6 +55,7 @@ logger.addHandler(fh)
 
 app = {'current_task_id': 0}
 
+
 def scheduler_listener(event):
     print(arrow.now().format('YYYY-MM-DD HH:mm:ss'), event.code)
     if event.code == EVENT_JOB_ERROR:
@@ -156,9 +157,11 @@ def add_task_to_scheduler_bak(market, task, room=None, power_off=False):
 
     return tasks
 
+
 def find_next_task_id():
     app['current_task_id'] += 1
     return format(app['current_task_id'], '03d')
+
 
 def schedule_task(market, task):
     tasks = []
@@ -178,6 +181,7 @@ def schedule_task(market, task):
         tasks.append(active_task(market, task))
 
     return tasks
+
 
 def active_task(market, task):
     kwargs = {'group': task['group'], 'socketio': socketio, 'tasks': active_tasks}

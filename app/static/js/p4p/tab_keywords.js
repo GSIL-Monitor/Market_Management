@@ -49,11 +49,29 @@ function Tab_Keywords(socket, market=undefined, categories=undefined, directory=
     this.$content.find('thead').on('click', 'th', function(){
         let $th = $(this)
         if($th.index() == 1 || $th.index() == 2){
-            return
+            let cls = $th.attr('class')
+            if($th.data('checked')){
+                that.$content.find(`tbody input.${cls}`).prop('checked', false)
+                $th.data('checked', false)
+            }else{
+                that.$content.find(`tbody input.${cls}`).prop('checked', true)
+                $th.data('checked', true)
+            }
+        }else{
+            Utils.table_sort($th.parents('table'), $th)
         }
-        Utils.table_sort($th.parents('table'), $th)
     })
 
+    this.$content.find('tbody').on('click', 'input[type="checkbox"]', function(){
+        let id = $(this).val()
+        let cls = $(this).attr('class')
+        console.log(id, cls, $(this).prop('checked'))
+        if($(this).prop('checked')){
+            that.$content.find(`tbody tr.${id} input.${cls}`).prop('checked', true)
+        }else{
+            that.$content.find(`tbody tr.${id} input.${cls}`).prop('checked', false)
+        }
+    })
 }
 
 Tab_Keywords.prototype = Tab.prototype
@@ -69,6 +87,7 @@ Tab_Keywords.prototype.load_recording_keywords = function(){
         }
     })
 }
+
 Tab_Keywords.prototype.load_monitor_keywords = function(){
     let that = this
     this.socket.emit('deserialize', this.market, [], 'p4p_keywords_list_monitor.json', true, function(data){

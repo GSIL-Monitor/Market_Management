@@ -3,29 +3,23 @@ from flask_socketio import emit, join_room, leave_room
 from .. import socketio
 from .. import scheduler
 from .. import active_tasks as all_tasks
-from .. import p4ps
 from .. import schedule_task
 from .. import get_p4p
-from .. import logger
 
 from datetime import datetime
 from libs.json import JSON
 from libs.task import Task
-# from win32com.shell import shell, shellcon
 import os
 import tkinter
 from tkinter import filedialog
 
+import os
 import re
 import time
-import arrow
-# import win32gui
-from apscheduler.triggers.interval import IntervalTrigger
 
 from selenium import webdriver
 
 from libs.alibaba.alibaba import Alibaba
-from libs.alibaba.p4p import P4P
 from libs.crawlers.keywords_crawler_alibaba import KwclrAlibaba
 from libs.crawlers.keywords_crawler_ali_sr import KwclrAliSr
 from libs.crawlers.keywords_crawler_ali_sp import KwclrAliSp
@@ -169,6 +163,8 @@ def get_all_tasks(market):
 @socketio.on('get_p4p_keywords_crawl_result_file_list', namespace='/markets')
 def get_p4p_keywords_crawl_result_file_list(market):
     root = market['directory'] + '_config'
+    if not os.path.exists(root):
+        os.makedirs(root)
     return [n for n in os.listdir(root) if os.path.isfile(os.path.join(root, n)) and n.startswith('p4p_keywords_crawl_result_')]
 
 
@@ -200,7 +196,7 @@ def update_market(market):
 def add_market():
     root = tkinter.Tk()
     root.withdraw()
-    path = filedialog.askdirectory(parent=root, initialdir="/",title='请选择上传产品目录')
+    path = filedialog.askdirectory(parent=root, initialdir="/", title='请选择上传产品目录')
     if path:
         name = os.path.basename(path)
         path = path.replace('/', '\\')
@@ -219,7 +215,6 @@ def add_market():
         msg = {'type': 'primary', 'content': 'No directory of market was selected.'}
         emit('notify', msg, room=request.sid)
         return
-
 
 @socketio.on('get_all_markets', namespace='/markets')
 def get_all_markets():
