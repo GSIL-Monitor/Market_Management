@@ -7,6 +7,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import WebDriverException
+from selenium.common.exceptions import TimeoutException
 from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import ElementNotVisibleException
 from selenium.common.exceptions import StaleElementReferenceException
@@ -23,6 +24,7 @@ import json
 import requests
 import time
 import re
+import os
 import math
 import ctypes
 
@@ -64,6 +66,16 @@ class Inquiry:
         self.reply_js_template = "document.getElementById('tinymce').innerHTML = `{message}`;"
         self.load_tracking_ids()
         self.load_reply_templates()
+
+        self.catalog = None
+        self.load_find_catalog()
+
+    def load_find_catalog(self):
+        root = self.market['directory'] + '_config'
+        for f in os.listdir(root):
+            if re.search(r'[c|C]{1}atalog[ue]?.*\.pdf', f):
+                self.catalog = re.sub(r'\\', '\\\\', root + '\\' + f)
+                break
 
     def notify(self, typo, message):
         if self.socketio:
@@ -229,6 +241,7 @@ class Inquiry:
 
     def is_auto_reply_needed(self, enquiry):
         eid = enquiry['id']
+        # for testing purpose
         # if enquiry['id'] == '11947313067':
         #     if eid not in self.tracking_ids:
         #         self.tracking_ids[eid] = {}
@@ -236,6 +249,8 @@ class Inquiry:
         #         self.tracking_ids[eid]['status'] = ['new']
         #         self.save_tracking_ids()
         #     return True
+        # else:
+        #     return False
 
         if enquiry['responsible_person'].lower() != self.lname.lower():
             return False
@@ -277,7 +292,7 @@ class Inquiry:
             last_status = tracking['status'][-1]
             if last_status == 'new':
                 greetings = '<p>Pleased to hear from you.</p><br>'
-                # buyer['email'] = 'changshu.qd@gmail.com'
+                # buyer['email'] = 'changshu.qd@gmail.com'  # for testing purpose
                 if buyer['email']:
                     emails = [buyer['email']]
                     mime_message = Email.message_of_product_catalog(self.market, self.account, buyer['name'])
@@ -285,7 +300,7 @@ class Inquiry:
                         params = {'buyer': buyer['name'], 'greetings': greetings, 'email': buyer['email'],
                                   'sender': self.lname}
                         message = self.reply_templates['notify_catalog_was_sent'].substitute(params)
-                        self.send_message(message)
+                        self.send_message(message, self.catalog)
                         tracking['status'].append('catalog was sent by email')
                         self.save_tracking_ids()
                 else:
@@ -311,7 +326,7 @@ class Inquiry:
                         params = {'buyer': buyer['name'], 'greetings': greetings, 'email': ', '.join(emails),
                                   'sender': self.lname}
                         message = self.reply_templates['notify_catalog_was_sent'].substitute(params)
-                        self.send_message(message)
+                        self.send_message(message, self.catalog)
                         tracking['status'].append('catalog was sent by email')
                         self.save_tracking_ids()
         except Exception as e:
@@ -320,9 +335,30 @@ class Inquiry:
         finally:
             self.close_inquiry_and_switch_back()
 
-    def send_message(self, message, attachment=None):
+    def send_message(self, message, attach=None):
         chat_form = self.browser.find_element_by_css_selector('form.reply-wrapper')
         chat_form.click()
+
+        uploading_failed = False
+        if attach:
+            file_input = self.browser.find_element_by_css_selector('input#attachs')
+            file_input.send_keys(attach)
+
+            css = 'div.next-upload-list-item:last-child'
+            div = WebDriverWait(self.browser, 15).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, css)))
+            try:
+                WebDriverWait(self.browser, 60).until(
+                    element_has_css_class(div, 'next-upload-list-item-done'))
+            except TimeoutException:
+                print('time out, cancel uploading')
+                div.find_element_by_css_selector('i.next-icon-close').click()
+                uploading_failed = True
+
+        if uploading_failed or attach is None:
+            doc = pq(message)
+            doc.find('span.attach').remove()
+            message = doc.outer_html()
 
         WebDriverWait(self.browser, 15).until(
             EC.frame_to_be_available_and_switch_to_it((By.CSS_SELECTOR, '#inquiry-content_ifr')))
@@ -332,7 +368,9 @@ class Inquiry:
         js = self.reply_js_template.format(message=message)
         self.browser.execute_script(js)
         self.browser.switch_to.default_content()
+
         time.sleep(1)
+
         btn_send = chat_form.find_element_by_css_selector('button.send')
         btn_send.click()
 
@@ -381,3 +419,13 @@ class Inquiry:
                 socketio.emit('event_task_last_run_finished', {'tid': tid}, namespace='/markets', broadcast=True)
 
 
+class element_has_css_class(object):
+    def __init__(self, element, css_class):
+        self.element = element
+        self.css_class = css_class
+
+    def __call__(self, driver):
+        if self.css_class in self.element.get_attribute("class"):
+            return self.element
+        else:
+            return False
