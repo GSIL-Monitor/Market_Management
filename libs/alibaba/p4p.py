@@ -42,7 +42,7 @@ class P4P():
     api = 'https://www2.alibaba.com/manage_ad_keyword.htm'
     keywords_list = {}
     
-    def __init__(self, market, lid, lpwd, socketio, namespace=None, room=None):
+    def __init__(self, market, lid, lpwd, socketio=None, namespace=None, room=None):
         self.logger = logging.getLogger(market['name'])
         self.logger.setLevel(logging.DEBUG)
         fh = TimedRotatingFileHandler('log/p4p['+market['name']+'].log', when="d", interval=1,  backupCount=7)
@@ -419,7 +419,6 @@ class P4P():
 
         WebDriverWait(self.browser, 15).until(
             EC.invisibility_of_element_located((By.CSS_SELECTOR, 'div.bp-loading-panel')))
-
 
         checkbox = tr.find_element_by_css_selector('td:first-child input')
         if checkbox.is_selected():
