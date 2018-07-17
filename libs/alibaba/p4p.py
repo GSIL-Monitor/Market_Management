@@ -42,7 +42,7 @@ class P4P():
     api = 'https://www2.alibaba.com/manage_ad_keyword.htm'
     keywords_list = {}
     
-    def __init__(self, market, lid, lpwd, socketio, namespace=None, room=None):
+    def __init__(self, market, lid, lpwd, socketio=None, namespace=None, room=None):
         self.logger = logging.getLogger(market['name'])
         self.logger.setLevel(logging.DEBUG)
         fh = TimedRotatingFileHandler('log/p4p['+market['name']+'].log', when="d", interval=1,  backupCount=7)
@@ -358,7 +358,7 @@ class P4P():
             try:
                 if self.browser is None:
                     self.logger.info('open browser and login')
-                    alibaba = Alibaba(self.lid, self.lpwd, None, None, None)
+                    alibaba = Alibaba(self.lid, self.lpwd, None, None, None, headless=False)
                     alibaba.login()
                     self.browser = alibaba.browser
                     self.alibaba = alibaba
