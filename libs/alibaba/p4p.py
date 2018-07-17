@@ -420,7 +420,6 @@ class P4P():
         WebDriverWait(self.browser, 15).until(
             EC.invisibility_of_element_located((By.CSS_SELECTOR, 'div.bp-loading-panel')))
 
-
         checkbox = tr.find_element_by_css_selector('td:first-child input')
         if checkbox.is_selected():
             checkbox.click()
