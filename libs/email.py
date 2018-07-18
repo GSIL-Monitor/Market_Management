@@ -6,16 +6,21 @@ from string import Template
 
 class Email:
     @classmethod
-    def send(cls, account, receivers, message):
+    def send(cls, account, receivers, message, attachment=None):
         successfull = False
         try:
-            message['From'] = account['lid']
-            message['To'] = ','.join(receivers)
-            client = smtplib.SMTP()
-            client.connect('smtp.glittergroupcn.com')
-            client.login(account['lid'], account['lpwd'])
-            client.sendmail(account['lid'], receivers, message.as_string())
-            successfull = True
+            if attachment:
+                successfull = False
+                print('attachment is not supported yet!')
+                pass
+            else:
+                message['From'] = account['lid']
+                message['To'] = ','.join(receivers)
+                client = smtplib.SMTP()
+                client.connect('smtp.glittergroupcn.com')
+                client.login(account['lid'], account['lpwd'])
+                client.sendmail(account['lid'], receivers, message.as_string())
+                successfull = True
             print('邮件发送成功！')
         except smtplib.SMTPRecipientsRefused:
             print('邮件发送失败，收件人被拒绝')

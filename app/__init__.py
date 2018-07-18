@@ -360,6 +360,6 @@ def create_app(debug=True):
                 t['end_date'] = end_date.format('YYYY-MM-DD HH:mm:ss')
                 print('>>>>', t)
 
-                schedule_task(market, t)
+                # schedule_task(market, t)
         print()
     return app
