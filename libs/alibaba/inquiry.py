@@ -408,41 +408,61 @@ class Inquiry:
 
         self.load_url()
 
-        if tid:
-            tasks[tid]['progress'] = 15
-            socketio.emit('event_task_progress', {'tid': tid, 'progress': 15}, namespace='/markets', broadcast=True)
-
-        inquiries = self.get_inquiries()
-
-        if tid:
-            tasks[tid]['progress'] = 20
-            socketio.emit('event_task_progress', {'tid': tid, 'progress': 20}, namespace='/markets', broadcast=True)
-
-        count = len(inquiries)
-
-        self.load_tracking_ids()
-
-        idx = 0
-        for enquiry in inquiries:
-            idx += 1
+        if 'eyelash' in self.market['name'].lower():
             if tid:
-                progress = 20 + 80*idx/count
-                tasks[tid]['progress'] = progress
-                socketio.emit('event_task_progress', {'tid': tid, 'progress': progress}, namespace='/markets', broadcast=True)
+                tasks[tid]['progress'] = 15
+                socketio.emit('event_task_progress', {'tid': tid, 'progress': 15}, namespace='/markets', broadcast=True)
 
-            if not self.is_auto_reply_needed(enquiry):
+            inquiries = self.get_inquiries()
+
+            if tid:
+                tasks[tid]['progress'] = 20
+                socketio.emit('event_task_progress', {'tid': tid, 'progress': 20}, namespace='/markets', broadcast=True)
+
+            count = len(inquiries)
+
+            self.load_tracking_ids()
+
+            idx = 0
+            for enquiry in inquiries:
+                idx += 1
+                if tid:
+                    progress = 20 + 80*idx/count
+                    tasks[tid]['progress'] = progress
+                    socketio.emit('event_task_progress', {'tid': tid, 'progress': progress}, namespace='/markets', broadcast=True)
+
+                if not self.is_auto_reply_needed(enquiry):
+                    continue
+
+                print('enquiry ' + enquiry['id'] + ' reply is needed')
+                self.reply(enquiry)
+            
+            if tid:
+                tasks[tid]['is_running'] = False
+                tasks[tid]['progress'] = 0
+                if tasks[tid]['is_last_run']:
+                    del tasks[tid]
+                    socketio.emit('event_task_last_run_finished', {'tid': tid}, namespace='/markets', broadcast=True)
+
+        icon = WebDriverWait(self.browser, 15).until(EC.visibility_of_element_located((By.CSS_SELECTOR, '#webatm2-iconbar')))
+        container = self.browser.find_element_by_css_selector('#webww-contacts')
+        dialog_iframe = self.browser.find_element_by_css_selector('#webatm2-iframe')
+        while True:
+            try:
+                icon.click()
+                WebDriverWait(self.browser, 15).until(EC.invisibility_of_element_located((By.CSS_SELECTOR, '#webww-contacts .webatm2-tips')))
+                confirm = self.browser.find_element_by_css_selector('#webww-contacts .webatm2-confirm')
+                if confirm.is_displayed():
+                    # failed login, cancel checking
+                    print('Trade Manager has been loged in somewhere else, cancel checking')
+                    close_btn = confirm.find_element_by_css_selector('span.webatm2-confirm-close')
+                    close_btn.click()
+                    break
+                
+                if 'show-panel' in container.get_attribute('class'):
+                    break
+            except TimeoutException:
                 continue
-
-            print('enquiry ' + enquiry['id'] + ' reply is needed')
-            self.reply(enquiry)
-        
-        if tid:
-            tasks[tid]['is_running'] = False
-            tasks[tid]['progress'] = 0
-            if tasks[tid]['is_last_run']:
-                del tasks[tid]
-                socketio.emit('event_task_last_run_finished', {'tid': tid}, namespace='/markets', broadcast=True)
-
 
 class element_has_css_class(object):
     def __init__(self, element, css_class):

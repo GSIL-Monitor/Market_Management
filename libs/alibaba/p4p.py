@@ -151,7 +151,7 @@ class P4P():
 
         try:
             keywords = []
-            self.load_keywords('recording')
+            # self.load_keywords('recording')
             if tid:
                 tasks[tid]['progress'] = 1
                 socketio.emit('event_task_progress', {'tid': tid, 'progress': 1}, namespace='/markets', broadcast=True)
@@ -182,9 +182,9 @@ class P4P():
                         print('index:', idx, len(trs), end=' > ')
                         ActionChains(self.browser).move_to_element(tr).perform()
                         id = tr.find_element_by_css_selector('td:first-child input').get_attribute('value').strip()
-                        if id not in self.keywords_list['recording']:
-                            print('skipped_not_in_recording')
-                            continue
+                        # if id not in self.keywords_list['recording']:
+                        #     print('skipped_not_in_recording')
+                        #     continue
 
                         grp = tr.find_element_by_css_selector('td:nth-child(4)').text.strip()
                         if group != 'all':
@@ -243,7 +243,7 @@ class P4P():
         try:
             print('Task Monitor start to run with group="' + group + '"')
             keywords = []
-            self.load_keywords('monitor')
+            # self.load_keywords('monitor')
             if tid:
                 tasks[tid]['progress'] = 1
                 socketio.emit('event_task_progress', {'tid': tid, 'progress': 1}, namespace='/markets', broadcast=True)
@@ -275,9 +275,9 @@ class P4P():
                         print('index:', idx, len(trs), end=' > ')
                         ActionChains(self.browser).move_to_element(tr).perform()
                         id = tr.find_element_by_css_selector('td:first-child input').get_attribute('value').strip()
-                        if id not in self.keywords_list['monitor']:
-                            print('skipped_not_in_monitoring')
-                            continue
+                        # if id not in self.keywords_list['monitor']:
+                        #     print('skipped_not_in_monitoring')
+                        #     continue
 
                         grp = tr.find_element_by_css_selector('td:nth-child(4)').text.strip()
                         if group != 'all':
