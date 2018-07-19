@@ -70,7 +70,7 @@ def get_inquiry(node):
         return inquiry
 
     text = node.split('@')[0]
-    market_name = text.split(':')[0]
+    market_name = text.split(':')[0].split('<')[0]
     lname = text.split(':')[1] if len(text.split(':')) == 2 else None
     market = JSON.deserialize('.', 'storage', 'markets.json')[market_name]
 
@@ -88,7 +88,7 @@ def get_p4p(node):
         return p4p
 
     text = node.split('@')[0]
-    market_name = text.split(':')[0]
+    market_name = text.split(':')[0].split('<')[0]
     lname = text.split(':')[1] if len(text.split(':')) == 2 else None
     market = JSON.deserialize('.', 'storage', 'markets.json')[market_name]
 
