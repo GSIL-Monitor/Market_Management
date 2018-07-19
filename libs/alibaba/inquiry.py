@@ -239,15 +239,19 @@ class Inquiry:
             text = f.read()
         self.reply_templates['notify_catalog_was_sent'] = Template(text)
 
+        file = './/templates//inquiry_reply_template_first_reply_without_email.html'
+        with open(file, 'r') as f:
+            text = f.read()
+        self.reply_templates['notify_first_reply_without_email'] = Template(text)
+
     def is_auto_reply_needed(self, enquiry):
         eid = enquiry['id']
-        # for testing purpose
+        #  # for testing purpose
         # if enquiry['id'] == '11947313067':
-        #     if eid not in self.tracking_ids:
-        #         self.tracking_ids[eid] = {}
-        #         self.tracking_ids[eid]['datetime'] = pendulum.now()
-        #         self.tracking_ids[eid]['status'] = ['new']
-        #         self.save_tracking_ids()
+        #     self.tracking_ids[eid] = {}
+        #     self.tracking_ids[eid]['datetime'] = pendulum.now()
+        #     self.tracking_ids[eid]['status'] = ['new']
+        #     self.save_tracking_ids()
         #     return True
         # else:
         #     return False
@@ -290,9 +294,10 @@ class Inquiry:
             eid = enquiry['id']
             tracking = self.tracking_ids[eid]
             last_status = tracking['status'][-1]
+            greetings = '<p>Pleased to hear from you.</p><br>'
             if last_status == 'new':
-                greetings = '<p>Pleased to hear from you.</p><br>'
                 # buyer['email'] = 'changshu.qd@gmail.com'  # for testing purpose
+                # buyer['email'] = ''  # for testing purpose
                 if buyer['email']:
                     emails = [buyer['email']]
                     mime_message = Email.message_of_product_catalog(self.market, self.account, buyer['name'])
@@ -300,15 +305,30 @@ class Inquiry:
                         params = {'buyer': buyer['name'], 'greetings': greetings, 'email': buyer['email'],
                                   'sender': self.lname}
                         message = self.reply_templates['notify_catalog_was_sent'].substitute(params)
-                        self.send_message(message, self.catalog)
-                        tracking['status'].append('catalog was sent by email')
-                        self.save_tracking_ids()
+                        if self.send_message(message, self.catalog):
+                            tracking['status'].append('catalog was sent by email')
+                            self.save_tracking_ids()
+                        else:
+                            tracking['status'].append('catalog was sent by email, but reply was failed')
+                            self.save_tracking_ids()
                 else:
                     params = {'buyer': buyer['name'], 'greetings': greetings, 'sender': self.lname}
-                    message = self.reply_templates['acquire_email_address'].substitute(params)
-                    self.send_message(message)
-                    tracking['status'].append('wait for email address')
+                    message = self.reply_templates['notify_first_reply_without_email'].substitute(params)
+                    if self.send_message(message, self.catalog):
+                        tracking['status'].append('catalog was sent directly')
+                        self.save_tracking_ids()
+            elif 'catalog was sent' in last_status and 'reply was failed' in last_status:
+                if is_replied:
+                    tracking['status'].append('catalog was sent by email')
                     self.save_tracking_ids()
+                else:
+                    params = {'buyer': buyer['name'], 'greetings': greetings, 'email': buyer['email'],
+                              'sender': self.lname}
+                    message = self.reply_templates['notify_catalog_was_sent'].substitute(params)
+                    if self.send_message(message, self.catalog):
+                        tracking['status'].append('catalog was sent by email')
+                        self.save_tracking_ids()
+
             elif 'catalog was sent' in last_status:
                 pass
             elif 'wait for email address' in last_status:
@@ -322,13 +342,12 @@ class Inquiry:
                     self.save_tracking_ids()
                     mime_message = Email.message_of_product_catalog(self.market, self.account, buyer['name'])
                     if Email.send(self.account, emails, mime_message):
-                        greetings = ''
-                        params = {'buyer': buyer['name'], 'greetings': greetings, 'email': ', '.join(emails),
+                        params = {'buyer': buyer['name'], 'greetings': '', 'email': ', '.join(emails),
                                   'sender': self.lname}
                         message = self.reply_templates['notify_catalog_was_sent'].substitute(params)
-                        self.send_message(message, self.catalog)
-                        tracking['status'].append('catalog was sent by email')
-                        self.save_tracking_ids()
+                        if self.send_message(message, self.catalog):
+                            tracking['status'].append('catalog was sent by email')
+                            self.save_tracking_ids()
         except Exception as e:
             self.notify("danger", '回复 询盘 [' + enquiry['id'] + '] 时 发生错误! ' + str(e))
             traceback.print_exc()
@@ -348,17 +367,20 @@ class Inquiry:
             div = WebDriverWait(self.browser, 15).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, css)))
             try:
-                WebDriverWait(self.browser, 60).until(
+                WebDriverWait(self.browser, 150).until(
                     element_has_css_class(div, 'next-upload-list-item-done'))
             except TimeoutException:
                 print('time out, cancel uploading')
                 div.find_element_by_css_selector('i.next-icon-close').click()
                 uploading_failed = True
-
-        if uploading_failed or attach is None:
-            doc = pq(message)
-            doc.find('span.attach').remove()
-            message = doc.outer_html()
+            
+        if uploading_failed:
+            return False
+                
+        # if uploading_failed or attach is None:
+        #     doc = pq(message)
+        #     doc.find('span.attach').remove()
+        #     message = doc.outer_html()
 
         WebDriverWait(self.browser, 15).until(
             EC.frame_to_be_available_and_switch_to_it((By.CSS_SELECTOR, '#inquiry-content_ifr')))
@@ -373,6 +395,7 @@ class Inquiry:
 
         btn_send = chat_form.find_element_by_css_selector('button.send')
         btn_send.click()
+        return True
 
     def check(self, group=None, tid=None, socketio=None, tasks=None):
         if tid:
@@ -396,6 +419,8 @@ class Inquiry:
             socketio.emit('event_task_progress', {'tid': tid, 'progress': 20}, namespace='/markets', broadcast=True)
 
         count = len(inquiries)
+
+        self.load_tracking_ids()
 
         idx = 0
         for enquiry in inquiries:
