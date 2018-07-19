@@ -62,7 +62,10 @@ def p4p_info(self):
 @app.task(bind=True)
 def power_off(self):
     os.system('shutdown -s')
-    pass
+
+@app.task(bind=True)
+def reboot(self):
+    os.system("shutdown -t 0 -r -f")
 
 def get_inquiry(node):
     global inquiry

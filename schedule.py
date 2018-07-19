@@ -49,8 +49,7 @@ app.conf.beat_schedule = {
     'power_off': {
 	    'task': 'tasks.power_off',
 	    'schedule': crontab(minute='30', hour='17'),
-	    # 'kwargs': {'group': '直通车App'},
-	    'options': {'queue': 'Eyelashes_p4p'}
+	    'options': {'queue': 'celery'}
     }
     # ,
     # 'Eyelashes_p4p_check_1': {
