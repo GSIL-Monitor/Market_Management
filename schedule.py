@@ -46,8 +46,8 @@ app.conf.beat_schedule = {
 	    'kwargs': {'group': '0直通车'},
 	    'options': {'queue': 'Tools_p4p'}
     }, 
-    'power_off': {
-	    'task': 'tasks.power_off',
+    'reboot': {
+	    'task': 'tasks.reboot',
 	    'schedule': crontab(minute='30', hour='17'),
 	    'options': {'queue': 'celery'}
     }
