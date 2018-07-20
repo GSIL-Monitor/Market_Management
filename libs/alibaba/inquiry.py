@@ -291,19 +291,24 @@ class Inquiry:
                     is_replied = True
                     reply_count += 1
 
+            # check if email address is already exists in conversation
+            text = ''
+            for msg in last_buyer_messages:
+                text = text + '\n\n ' + msg['content']
+            emails = re.findall('([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)', text)
+
+            if buyer['email']:
+                emails.append(buyer['email'])
+
             eid = enquiry['id']
             tracking = self.tracking_ids[eid]
             last_status = tracking['status'][-1]
             greetings = '<p>Pleased to hear from you.</p><br>'
             if last_status == 'new':
-                # buyer['email'] = 'changshu.qd@gmail.com'  # for testing purpose
-                # buyer['email'] = ''  # for testing purpose
-                if buyer['email']:
-                    emails = [buyer['email']]
+                if emails:
                     mime_message = Email.message_of_product_catalog(self.market, self.account, buyer['name'])
                     if Email.send(self.account, emails, mime_message):
-                        params = {'buyer': buyer['name'], 'greetings': greetings, 'email': buyer['email'],
-                                  'sender': self.lname}
+                        params = {'buyer': buyer['name'], 'greetings': greetings, 'email': ','.join(emails), 'sender': self.lname}
                         message = self.reply_templates['notify_catalog_was_sent'].substitute(params)
                         if self.send_message(message, self.catalog):
                             tracking['status'].append('catalog was sent by email')
@@ -322,8 +327,7 @@ class Inquiry:
                     tracking['status'].append('catalog was sent by email')
                     self.save_tracking_ids()
                 else:
-                    params = {'buyer': buyer['name'], 'greetings': greetings, 'email': buyer['email'],
-                              'sender': self.lname}
+                    params = {'buyer': buyer['name'], 'greetings': greetings, 'email': ','.join(emails), 'sender': self.lname}
                     message = self.reply_templates['notify_catalog_was_sent'].substitute(params)
                     if self.send_message(message, self.catalog):
                         tracking['status'].append('catalog was sent by email')

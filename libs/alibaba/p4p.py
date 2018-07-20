@@ -744,8 +744,8 @@ class P4P():
                             socketio.emit('event_task_progress', {'tid': tid, 'progress': tasks[tid]['progress']},
                                           namespace='/markets', broadcast=True)
                         id = tr.find_element_by_css_selector('td:first-child input').get_attribute('value').strip()
-                        if monitored and id not in self.keywords_list['monitor']:
-                            continue
+                        # if monitored and id not in self.keywords_list['monitor']:
+                        #     continue
 
                         if group != 'all':
                             grp = tr.find_element_by_css_selector('td:nth-child(4)').text.strip()
