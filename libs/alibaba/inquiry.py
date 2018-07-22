@@ -64,6 +64,7 @@ class Inquiry:
         self.account['lname'] = self.lname
 
         self.reply_js_template = "document.getElementById('tinymce').innerHTML = `{message}`;"
+        self.webww_reply_js_template = "document.getElementById('tinymce').innerHTML = `{message}`;"
         self.load_tracking_ids()
         self.load_reply_templates()
 
@@ -88,7 +89,7 @@ class Inquiry:
 
     def login(self):
         if self.browser is None:
-            self.alibaba = Alibaba(self.lid, self.lpwd, None, None, None, headless=True)
+            self.alibaba = Alibaba(self.lid, self.lpwd, None, None, None, headless=False)
             self.alibaba.login()
             self.browser = self.alibaba.browser
         else:
@@ -140,7 +141,7 @@ class Inquiry:
             item = {}
             item['url'] = div.find('a').attr('href')
             text = div.find('div.spec-inquiry-id').text().strip()
-            item['id'] = re.sub('询价单号：', '', text)
+            item['id'] = re.search('(\d+)', text).group(1)
             item['date'] = div.find('div.spec-inquiry-id+div').text().strip()
             item['tags'] = []
             for span in div.find('div.aui-tags span'):
@@ -158,7 +159,7 @@ class Inquiry:
                 item['buyer_local_time'] = None
             item['responsible_person'] = div.find('td:nth-child(7)').text()
             item['status'] = div.find('td:nth-child(8)').text()
-            if '新询盘' in item['status']:
+            if '新询盘' in item['status'] or 'New Inquiry' in item['status']:
                 item['is_new'] = True
             else:
                 item['is_new'] = False
@@ -243,6 +244,11 @@ class Inquiry:
         with open(file, 'r') as f:
             text = f.read()
         self.reply_templates['notify_first_reply_without_email'] = Template(text)
+
+        file = './/templates//webww_reply_template_first_reply.html'
+        with open(file, 'r') as f:
+            text = f.read()
+        self.reply_templates['webww_first_reply'] = Template(text)
 
     def is_auto_reply_needed(self, enquiry):
         eid = enquiry['id']
@@ -412,11 +418,14 @@ class Inquiry:
 
         self.load_url()
 
+        self.load_tracking_ids()
+
         if 'eyelash' in self.market['name'].lower():
             if tid:
                 tasks[tid]['progress'] = 15
                 socketio.emit('event_task_progress', {'tid': tid, 'progress': 15}, namespace='/markets', broadcast=True)
 
+            time.sleep(0.1)
             inquiries = self.get_inquiries()
 
             if tid:
@@ -424,8 +433,6 @@ class Inquiry:
                 socketio.emit('event_task_progress', {'tid': tid, 'progress': 20}, namespace='/markets', broadcast=True)
 
             count = len(inquiries)
-
-            self.load_tracking_ids()
 
             idx = 0
             for enquiry in inquiries:
@@ -448,25 +455,179 @@ class Inquiry:
                     del tasks[tid]
                     socketio.emit('event_task_last_run_finished', {'tid': tid}, namespace='/markets', broadcast=True)
 
-        icon = WebDriverWait(self.browser, 15).until(EC.visibility_of_element_located((By.CSS_SELECTOR, '#webatm2-iconbar')))
+        self.webww_check()
+
+    def webww_check(self):
+        threads = []
+        # try to login
+        icon = WebDriverWait(self.browser, 15).until(
+            EC.visibility_of_element_located((By.CSS_SELECTOR, '#webatm2-iconbar')))
         container = self.browser.find_element_by_css_selector('#webww-contacts')
         dialog_iframe = self.browser.find_element_by_css_selector('#webatm2-iframe')
         while True:
-            try:
-                icon.click()
-                WebDriverWait(self.browser, 15).until(EC.invisibility_of_element_located((By.CSS_SELECTOR, '#webww-contacts .webatm2-tips')))
-                confirm = self.browser.find_element_by_css_selector('#webww-contacts .webatm2-confirm')
-                if confirm.is_displayed():
-                    # failed login, cancel checking
-                    print('Trade Manager has been loged in somewhere else, cancel checking')
-                    close_btn = confirm.find_element_by_css_selector('span.webatm2-confirm-close')
-                    close_btn.click()
-                    break
-                
-                if 'show-panel' in container.get_attribute('class'):
-                    break
-            except TimeoutException:
+            icon.click()
+            WebDriverWait(self.browser, 15).until(
+                EC.invisibility_of_element_located((By.CSS_SELECTOR, '#webww-contacts .webatm2-tips')))
+            confirm = self.browser.find_element_by_css_selector('#webww-contacts .webatm2-confirm')
+            if confirm.is_displayed():
+                # failed login, cancel checking
+                print('Trade Manager has been loged in somewhere else, cancel checking')
+                close_btn = confirm.find_element_by_css_selector('span.webatm2-confirm-close')
+                close_btn.click()
+                return threads
+
+            if 'show-panel' in container.get_attribute('class'):
+                break
+
+        panel = WebDriverWait(self.browser, 15).until(
+            EC.visibility_of_element_located((By.CSS_SELECTOR, '#webatm2-panel')))
+        # after login
+
+        # open dialog
+        #     tab_recent = panel.find_element_by_css_selector('div.tab-recent')
+        #     if 'unread' not in tab_recent.get_attribute('class'):
+        #         print('there is no new messages.')
+        #         return threads
+
+        tab_sysmsg = panel.find_element_by_css_selector('div.tab-sysmsg')
+        tab_sysmsg.click()
+        panel.find_element_by_css_selector('.panel-sysmsg.active a').click()
+        WebDriverWait(self.browser, 15).until(EC.visibility_of_element_located((By.CSS_SELECTOR, '#webatm2-dialog')))
+
+        # switch to iframe and navigate to recent threads
+        self.browser.switch_to.frame(dialog_iframe)
+        sidebar = self.browser.find_element_by_css_selector('.webatm2-sidebar')
+        head = self.browser.find_element_by_css_selector('.webatm2-window-head')
+        body = self.browser.find_element_by_css_selector('.webatm2-window-body')
+        sidebar.find_element_by_css_selector('.tab-thread').click()
+        time.sleep(1)
+        doc = pq(sidebar.find_element_by_css_selector('.webatm2-thread-list').get_attribute('innerHTML'))
+        for div in doc.find('.webatm2-thread'):
+            div = pq(div)
+            thread = {}
+            thread['id'] = div.attr('data-user-id')
+            thread['online'] = not div.hasClass('offline')
+            thread['name'] = div.find('.thread-info .name').text()
+            thread['unread'] = div.hasClass('unread')
+            thread['unread_count'] = int(div.find('.thread-info span.unread').text())
+            threads.append(thread)
+
+            if thread['unread_count'] == 0:
                 continue
+
+            if re.search('[\u4E00-\u9FA5]+', thread['name']):  # old thread
+                continue
+
+            tid = thread['id']
+            if tid not in self.tracking_ids:
+                self.tracking_ids[tid] = {}
+                self.tracking_ids[tid]['datetime'] = pendulum.now()
+                self.tracking_ids[tid]['status'] = ['new']
+                self.save_tracking_ids()
+            self.webww_switch_to_thread(thread, sidebar, head, body)
+
+        self.browser.switch_to.default_content()
+        return threads
+
+    def webww_switch_to_thread(self, thread, sidebar, head, body):
+
+        div = sidebar.find_element_by_css_selector('div.webatm2-thread[data-user-id="' + thread['id'] + '"]')
+
+        if 'active' not in div.get_attribute('class'):
+            # msgs = body.find_elements_by_css_selector('.webatm2-messages .webatm2-message')
+            div.click()
+
+        #     if msgs:
+        #         print(msgs)
+        #         WebDriverWait(self.browser, 15).until(EC.staleness_of(msgs[-1]))
+        #     else:
+        #         WebDriverWait(self.browser, 15).until(
+        #             EC.presence_of_element_located((By.CSS_SELECTOR, '.webatm2-messages .webatm2-message')))
+        #     time.sleep(1)
+        # WebDriverWait(self.browser, 15).until(
+        #     EC.text_to_be_present_in_element((By.CSS_SELECTOR, '.webatm2-window-head .user-name'), thread['name']))
+
+        WebDriverWait(self.browser, 15).until(
+            EC.frame_to_be_available_and_switch_to_it((By.CSS_SELECTOR, '.show-contact iframe')))
+        buyer_name = ''
+        country = ''
+        login_location = ''
+        is_Alibaba_employee = False
+        try:
+            buyer_name = self.browser.find_element_by_css_selector('#mini-card-wrap span.user-nick').text
+            span_country = self.browser.find_element_by_css_selector(
+                '#mini-card-wrap .user-base-info-wrap span:nth-child(2)')
+            country = re.search(':(.*)', span_country.get_attribute('title')).group(1)
+
+            spans = self.browser.find_elements_by_css_selector('#vaildEmployee')
+            if spans:
+                is_Alibaba_employee = True
+
+            p_login_location = self.browser.find_elements_by_css_selector('#mini-card-wrap p.last-login-time')
+            if p_login_location:
+                login_location = re.search(':(.*)', p_login_location[0].get_attribute('title')).group(1)
+        except Exception as e:
+            traceback.print_exc()
+        finally:
+            self.browser.switch_to.parent_frame()
+
+        print(buyer_name, is_Alibaba_employee, country, login_location)
+        doc = pq(self.browser.find_element_by_css_selector('.webatm2-window-body .webatm2-messages').get_attribute(
+            'innerHTML'))
+
+        is_replied = False
+        last_buyer_message = []
+        messages = []
+        for div in doc.find('.webatm2-message'):
+            div = pq(div)
+            message = {}
+            message['is_self'] = div.hasClass('self')
+            message['datetime'] = div.find('.time-tag').text() if div.find('.time-tag') else None
+            message['content'] = div.find('.content').text().replace('\xa0', ' ')
+
+            if message['is_self']:
+                last_buyer_message = []
+                is_replied = True
+            else:
+                last_buyer_message.append(message)
+                is_replied = False
+
+            messages.append(message)
+
+        tid = thread['id']
+        tracking = self.tracking_ids[tid]
+        last_status = tracking['status'][-1]
+        if is_replied:
+            pass
+        elif is_Alibaba_employee:
+            msg = '0123456789'
+            self.webww_send_message(msg, body)
+            tracking['status'].append('irrelevant reply')
+            self.save_tracking_ids()
+        elif last_status == 'new':
+            link = 'https://drive.google.com/file/d/1gfHwDl1qPomAMnkFGCjiVk74e8CQagoI'
+            salutation = 'hi'
+            if buyer_name:
+                salutation = 'Dear ' + buyer_name
+            params = {'salutation': salutation, 'link': link, 'sender': self.lname}
+            msg = inquiry.reply_templates['webww_first_reply'].substitute(params)
+            self.webww_send_message(msg, body)
+            tracking['status'].append('link to catalog was send directly')
+            self.save_tracking_ids()
+        elif 'link to catalog was send' in last_status:
+            pass
+        else:
+            pass
+
+    def webww_send_message(self, msg, body):
+        edit = body.find_element_by_css_selector('div.webatm2-editor-body')
+        for part in msg.split('\n'):
+            edit.send_keys(part)
+            print(part)
+            ActionChains(self.browser).key_down(Keys.SHIFT).key_down(Keys.ENTER).key_up(Keys.SHIFT).perform()
+        edit.send_keys(Keys.BACKSPACE)
+        send_btn = body.find_element_by_css_selector('button.send')
+        # send_btn.click()
 
 class element_has_css_class(object):
     def __init__(self, element, css_class):
