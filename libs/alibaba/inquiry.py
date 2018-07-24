@@ -221,7 +221,7 @@ class Inquiry:
         if tracking_ids is not None:
             for key in tracking_ids:
                 d = pendulum.parse(tracking_ids[key]['datetime'])
-                if d.diff().in_hours()<=12:
+                if d.diff().in_hours() <= 24:
                     self.tracking_ids[key] = {}
                     self.tracking_ids[key]['datetime'] = d
                     self.tracking_ids[key]['status'] = tracking_ids[key]['status']
@@ -229,26 +229,32 @@ class Inquiry:
                         self.tracking_ids[key]['emails'] = tracking_ids[key]['emails']
 
     def load_reply_templates(self):
+        root = self.market['directory'] + '_config'
         self.reply_templates = {}
-        file = './/templates//inquiry_reply_template_acquire_email_address.html'
+        file = root + '//templates//inquiry_reply_template_acquire_email_address.html'
         with open(file, 'r') as f:
             text = f.read()
         self.reply_templates['acquire_email_address'] = Template(text)
 
-        file = './/templates//inquiry_reply_template_notify_catalog_was_sent.html'
+        file = root + '//templates//inquiry_reply_template_notify_catalog_was_sent.html'
         with open(file, 'r') as f:
             text = f.read()
         self.reply_templates['notify_catalog_was_sent'] = Template(text)
 
-        file = './/templates//inquiry_reply_template_first_reply_without_email.html'
+        file = root + '//templates//inquiry_reply_template_first_reply_without_email.html'
         with open(file, 'r') as f:
             text = f.read()
         self.reply_templates['notify_first_reply_without_email'] = Template(text)
 
-        file = './/templates//webww_reply_template_first_reply.html'
+        file = root + '//templates//webww_reply_template_first_reply.txt'
         with open(file, 'r') as f:
             text = f.read()
         self.reply_templates['webww_first_reply'] = Template(text)
+
+        file = root + '//templates//webww_reply_template_default_reply_for_contacted_buyer.txt'
+        with open(file, 'r') as f:
+            text = f.read()
+        self.reply_templates['webww_default_reply_for_contacted_buyer'] = Template(text)
 
     def is_auto_reply_needed(self, enquiry):
         eid = enquiry['id']
@@ -420,42 +426,39 @@ class Inquiry:
 
         self.load_tracking_ids()
 
-        if 'eyelash' in self.market['name'].lower():
+        if tid:
+            tasks[tid]['progress'] = 15
+            socketio.emit('event_task_progress', {'tid': tid, 'progress': 15}, namespace='/markets', broadcast=True)
+
+        time.sleep(0.1)
+        inquiries = self.get_inquiries()
+
+        if tid:
+            tasks[tid]['progress'] = 20
+            socketio.emit('event_task_progress', {'tid': tid, 'progress': 20}, namespace='/markets', broadcast=True)
+
+        count = len(inquiries)
+
+        idx = 0
+        for enquiry in inquiries:
+            idx += 1
             if tid:
-                tasks[tid]['progress'] = 15
-                socketio.emit('event_task_progress', {'tid': tid, 'progress': 15}, namespace='/markets', broadcast=True)
+                progress = 20 + 80*idx/count
+                tasks[tid]['progress'] = progress
+                socketio.emit('event_task_progress', {'tid': tid, 'progress': progress}, namespace='/markets', broadcast=True)
 
-            time.sleep(0.1)
-            inquiries = self.get_inquiries()
+            if not self.is_auto_reply_needed(enquiry):
+                continue
 
-            if tid:
-                tasks[tid]['progress'] = 20
-                socketio.emit('event_task_progress', {'tid': tid, 'progress': 20}, namespace='/markets', broadcast=True)
+            print('enquiry ' + enquiry['id'] + ' reply is needed')
+            self.reply(enquiry)
 
-            count = len(inquiries)
-
-            idx = 0
-            for enquiry in inquiries:
-                idx += 1
-                if tid:
-                    progress = 20 + 80*idx/count
-                    tasks[tid]['progress'] = progress
-                    socketio.emit('event_task_progress', {'tid': tid, 'progress': progress}, namespace='/markets', broadcast=True)
-
-                if not self.is_auto_reply_needed(enquiry):
-                    continue
-
-                print('enquiry ' + enquiry['id'] + ' reply is needed')
-                self.reply(enquiry)
-            
-            if tid:
-                tasks[tid]['is_running'] = False
-                tasks[tid]['progress'] = 0
-                if tasks[tid]['is_last_run']:
-                    del tasks[tid]
-                    socketio.emit('event_task_last_run_finished', {'tid': tid}, namespace='/markets', broadcast=True)
-
-        self.webww_check()
+        if tid:
+            tasks[tid]['is_running'] = False
+            tasks[tid]['progress'] = 0
+            if tasks[tid]['is_last_run']:
+                del tasks[tid]
+                socketio.emit('event_task_last_run_finished', {'tid': tid}, namespace='/markets', broadcast=True)
 
     def webww_check(self):
         threads = []
@@ -466,8 +469,12 @@ class Inquiry:
         dialog_iframe = self.browser.find_element_by_css_selector('#webatm2-iframe')
         while True:
             icon.click()
-            WebDriverWait(self.browser, 15).until(
-                EC.invisibility_of_element_located((By.CSS_SELECTOR, '#webww-contacts .webatm2-tips')))
+            try:
+                WebDriverWait(self.browser, 15).until(
+                    EC.invisibility_of_element_located((By.CSS_SELECTOR, '#webww-contacts .webatm2-tips')))
+            except TimeoutException as e:
+                print(str(e))
+                traceback.print_exc()
             confirm = self.browser.find_element_by_css_selector('#webww-contacts .webatm2-confirm')
             if confirm.is_displayed():
                 # failed login, cancel checking
@@ -484,10 +491,21 @@ class Inquiry:
         # after login
 
         # open dialog
-        #     tab_recent = panel.find_element_by_css_selector('div.tab-recent')
-        #     if 'unread' not in tab_recent.get_attribute('class'):
-        #         print('there is no new messages.')
-        #         return threads
+        time.sleep(2)
+        tab_recent = panel.find_element_by_css_selector('div.tab-recent')
+        if 'unread' not in tab_recent.get_attribute('class'):
+            # tracking_tid_exists = False
+            # for key in self.tracking_ids:
+            #     if key.startswith('enali'):
+            #         tracking_tid_exists = True
+            #         break
+            # if not tracking_tid_exists:
+            #     print('there is no new messages.')
+            #     return threads
+            print('there is no new messages.')
+            return threads
+
+        self.load_tracking_ids()
 
         tab_sysmsg = panel.find_element_by_css_selector('div.tab-sysmsg')
         tab_sysmsg.click()
@@ -505,7 +523,8 @@ class Inquiry:
         for div in doc.find('.webatm2-thread'):
             div = pq(div)
             thread = {}
-            thread['id'] = div.attr('data-user-id')
+            tid = div.attr('data-user-id')
+            thread['id'] = tid
             thread['online'] = not div.hasClass('offline')
             thread['name'] = div.find('.thread-info .name').text()
             thread['unread'] = div.hasClass('unread')
@@ -515,18 +534,23 @@ class Inquiry:
             if thread['unread_count'] == 0:
                 continue
 
-            if re.search('[\u4E00-\u9FA5]+', thread['name']):  # old thread
-                continue
-
-            tid = thread['id']
             if tid not in self.tracking_ids:
                 self.tracking_ids[tid] = {}
                 self.tracking_ids[tid]['datetime'] = pendulum.now()
-                self.tracking_ids[tid]['status'] = ['new']
+
+                if re.search('[\u4E00-\u9FA5]+', thread['name']):  # contacted
+                    self.tracking_ids[tid]['status'] = ['contacted']
+                else:
+                    self.tracking_ids[tid]['status'] = ['new']
+
                 self.save_tracking_ids()
             self.webww_switch_to_thread(thread, sidebar, head, body)
 
         self.browser.switch_to.default_content()
+        # self.find_('#webatm2-dialog .webatm2-dialog-close').click()
+
+        # time.sleep(5)
+        # self.load_url()
         return threads
 
     def webww_switch_to_thread(self, thread, sidebar, head, body):
@@ -567,6 +591,7 @@ class Inquiry:
             if p_login_location:
                 login_location = re.search(':(.*)', p_login_location[0].get_attribute('title')).group(1)
         except Exception as e:
+            print(str(e))
             traceback.print_exc()
         finally:
             self.browser.switch_to.parent_frame()
@@ -594,6 +619,19 @@ class Inquiry:
 
             messages.append(message)
 
+        salutation = 'hello'
+        if buyer_name:
+            salutation = 'Dear ' + buyer_name
+
+        # tempory code to set links for catalog
+        link = ''
+        if 'eyelash' in self.market['name'].lower():
+            link = 'https://drive.google.com/file/d/1gfHwDl1qPomAMnkFGCjiVk74e8CQagoI'
+        elif 'tool' in self.market['name'].lower():
+            link = ''
+
+        params = {'salutation': salutation, 'link': link, 'sender': self.lname, 'email': self.lid}
+
         tid = thread['id']
         tracking = self.tracking_ids[tid]
         last_status = tracking['status'][-1]
@@ -605,17 +643,15 @@ class Inquiry:
             tracking['status'].append('irrelevant reply')
             self.save_tracking_ids()
         elif last_status == 'new':
-            link = 'https://drive.google.com/file/d/1gfHwDl1qPomAMnkFGCjiVk74e8CQagoI'
-            salutation = 'hi'
-            if buyer_name:
-                salutation = 'Dear ' + buyer_name
-            params = {'salutation': salutation, 'link': link, 'sender': self.lname}
-            msg = inquiry.reply_templates['webww_first_reply'].substitute(params)
+            msg = self.reply_templates['webww_first_reply'].substitute(params)
             self.webww_send_message(msg, body)
-            tracking['status'].append('link to catalog was send directly')
+            tracking['status'].append('contacted')
             self.save_tracking_ids()
-        elif 'link to catalog was send' in last_status:
-            pass
+        elif last_status == 'contacted':
+            msg = self.reply_templates['webww_default_reply_for_contacted_buyer'].substitute(params)
+            self.webww_send_message(msg, body)
+            tracking['status'].append('replied with default message')
+            self.save_tracking_ids()
         else:
             pass
 
@@ -627,7 +663,7 @@ class Inquiry:
             ActionChains(self.browser).key_down(Keys.SHIFT).key_down(Keys.ENTER).key_up(Keys.SHIFT).perform()
         edit.send_keys(Keys.BACKSPACE)
         send_btn = body.find_element_by_css_selector('button.send')
-        # send_btn.click()
+        send_btn.click()
 
 class element_has_css_class(object):
     def __init__(self, element, css_class):

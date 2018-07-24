@@ -37,7 +37,7 @@ class Email:
     @classmethod
     def message_of_product_catalog(cls, market, account, buyer):
         catalog_href = "https://drive.google.com/open?id=1gfHwDl1qPomAMnkFGCjiVk74e8CQagoI"
-        file = './/templates//email_template_product_catalog.html'
+        file = market['directory'] + '_config//templates//email_template_product_catalog.html'
         with open(file, 'r') as f:
             text = f.read()
         t = Template(text)

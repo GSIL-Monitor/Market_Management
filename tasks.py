@@ -41,6 +41,11 @@ p4p = None
 inquiry = None
 
 @app.task(bind=True)
+def p4p_record(self, group='all'):
+    p4p = get_p4p(current_task.request.hostname)
+    p4p.crawl(group=group)
+
+@app.task(bind=True)
 def p4p_check(self, group='all'):
     p4p = get_p4p(current_task.request.hostname)
     p4p.monitor(group=group)
@@ -55,6 +60,12 @@ def inquiry_check(self):
     inquiry = get_inquiry(current_task.request.hostname)
     inquiry.check()
 
+@app.task(bind=True)
+def webww_check(self):
+    inquiry = get_inquiry(current_task.request.hostname)
+    inquiry.load_url()
+    inquiry.webww_check()
+
 @app.task(bind=True, ignore_result=True)
 def p4p_info(self):
     return p4p.market if p4p else 'not initialized yet!'
@@ -65,7 +76,7 @@ def power_off(self):
 
 @app.task(bind=True)
 def reboot(self):
-    os.system("shutdown -t 0 -r -f")
+    os.system("shutdown -t 60 -r -f")
 
 def get_inquiry(node):
     global inquiry
