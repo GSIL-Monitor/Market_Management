@@ -538,10 +538,14 @@ class Inquiry:
                 self.tracking_ids[tid] = {}
                 self.tracking_ids[tid]['datetime'] = pendulum.now()
 
-                if re.search('[\u4E00-\u9FA5]+', thread['name']):  # contacted
+                # 工具平台 不 区分 新老客户
+                if 'tools' in self.market['name'].lower():
                     self.tracking_ids[tid]['status'] = ['contacted']
                 else:
-                    self.tracking_ids[tid]['status'] = ['new']
+                    if re.search('[\u4E00-\u9FA5]+', thread['name']):  # contacted
+                        self.tracking_ids[tid]['status'] = ['contacted']
+                    else:
+                        self.tracking_ids[tid]['status'] = ['new']
 
                 self.save_tracking_ids()
             self.webww_switch_to_thread(thread, sidebar, head, body)
@@ -576,7 +580,8 @@ class Inquiry:
         buyer_name = ''
         country = ''
         login_location = ''
-        is_Alibaba_employee = False
+        is_alibaba_employee = False
+
         try:
             buyer_name = self.browser.find_element_by_css_selector('#mini-card-wrap span.user-nick').text
             span_country = self.browser.find_element_by_css_selector(
@@ -585,7 +590,7 @@ class Inquiry:
 
             spans = self.browser.find_elements_by_css_selector('#vaildEmployee')
             if spans:
-                is_Alibaba_employee = True
+                is_alibaba_employee = True
 
             p_login_location = self.browser.find_elements_by_css_selector('#mini-card-wrap p.last-login-time')
             if p_login_location:
@@ -596,7 +601,7 @@ class Inquiry:
         finally:
             self.browser.switch_to.parent_frame()
 
-        print(buyer_name, is_Alibaba_employee, country, login_location)
+        print(buyer_name, is_alibaba_employee, country, login_location)
         doc = pq(self.browser.find_element_by_css_selector('.webatm2-window-body .webatm2-messages').get_attribute(
             'innerHTML'))
 
@@ -637,7 +642,7 @@ class Inquiry:
         last_status = tracking['status'][-1]
         if is_replied:
             pass
-        elif is_Alibaba_employee:
+        elif is_alibaba_employee:
             msg = '0123456789'
             self.webww_send_message(msg, body)
             tracking['status'].append('irrelevant reply')

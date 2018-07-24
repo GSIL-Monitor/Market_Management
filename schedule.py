@@ -66,7 +66,7 @@ app.conf.beat_schedule = {
     },
     'reboot': {
         'task': 'tasks.reboot',
-        'schedule': crontab(minute='30', hour='17'),
+        'schedule': crontab(minute='30', hour='13'),
         'options': {'queue': 'celery'}
     }
 }

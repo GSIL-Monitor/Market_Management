@@ -25,7 +25,6 @@ from pyquery import PyQuery as pq
 
 import pendulum
 import arrow
-import imp
 import time
 import re
 
@@ -76,7 +75,7 @@ def power_off(self):
 
 @app.task(bind=True)
 def reboot(self):
-    os.system("shutdown -t 60 -r -f")
+    os.system("shutdown -t 180 -r -f")
 
 def get_inquiry(node):
     global inquiry
