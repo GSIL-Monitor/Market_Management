@@ -23,6 +23,7 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 from pyquery import PyQuery as pq
 
+import psutil
 import pendulum
 import arrow
 import time
@@ -75,7 +76,10 @@ def power_off(self):
 
 @app.task(bind=True)
 def reboot(self):
-    os.system("shutdown -t 180 -r -f")
+    boot_time = pendulum.from_timestamp(psutil.boot_time(), tz='Asia/Shanghai')
+    now = pendulum.now()
+    if (now - boot_time).in_minutes() > 10:
+        os.system("shutdown -t 180 -r -f")
 
 def get_inquiry(node):
     global inquiry
