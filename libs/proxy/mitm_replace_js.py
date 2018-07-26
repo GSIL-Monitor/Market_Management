@@ -9,13 +9,13 @@ class ReplaceJs:
     def __init__(self):
         self.load_js_content()
 
-    def request(self, flow: http.HTTPFlow) -> None:
-        if 'www.baidu.com' in flow.request.url:
-            print('--------------------------------------')
-            us = server = urlparse.parse_qs(urlparse.urlparse(url).query)['upstream'][0]
-            if flow.live:
-                flow.live.change_upstream_proxy_server(tuple(us.split(':')))
-            flow.kill()
+    # def request(self, flow: http.HTTPFlow) -> None:
+    #     if 'www.baidu.com' in flow.request.url:
+    #         print('--------------------------------------')
+    #         us = server = urlparse.parse_qs(urlparse.urlparse(url).query)['upstream'][0]
+    #         if flow.live:
+    #             flow.live.change_upstream_proxy_server(tuple(us.split(':')))
+    #         flow.kill()
 
     def response(self, flow: http.HTTPFlow) -> None:
         if 'assets.alicdn.com/g/secdev/sufei_data/' in flow.request.url:
