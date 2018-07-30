@@ -11,7 +11,7 @@ minutes_0_60_5_2 = ','.join([str(x) for x in range(2,60,5)])
 minutes_0_45_2_1 = ','.join([str(x) for x in range(1,45,2)])
 
 app = Celery('scheduler')
-app.config_from_object('celeryconfig')
+app.config_from_object('conf.celeryconfig')
 app.conf.beat_schedule = {
     'Eyelashes_p4p_record': {
         'task': 'tasks.p4p_record',

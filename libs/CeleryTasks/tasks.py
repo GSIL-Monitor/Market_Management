@@ -35,46 +35,46 @@ import threading
 
 # app = Celery('tasks', backend='redis://localhost/0', broker='redis://localhost/0')
 app = Celery('tasks')
-app.config_from_object('celeryconfig')
+app.config_from_object('conf.celeryconfig')
 
 p4p = None
 inquiry = None
 
-@app.task(bind=True)
+@app.task(bind=True, name='tasks.p4p_record')
 def p4p_record(self, group='all'):
     p4p = get_p4p(current_task.request.hostname)
     p4p.crawl(group=group)
 
-@app.task(bind=True)
+@app.task(bind=True, name='tasks.p4p_check')
 def p4p_check(self, group='all'):
     p4p = get_p4p(current_task.request.hostname)
     p4p.monitor(group=group)
 
-@app.task(bind=True)
+@app.task(bind=True, name="tasks.p4p_turn_all_off")
 def p4p_turn_all_off(self, group='all'):
     p4p = get_p4p(current_task.request.hostname)
     p4p.turn_all_off(group=group)
 
-@app.task(bind=True)
+@app.task(bind=True, name="tasks.inquiry_check")
 def inquiry_check(self):
     inquiry = get_inquiry(current_task.request.hostname)
     inquiry.check()
 
-@app.task(bind=True)
+@app.task(bind=True, name="tasks.webww_check")
 def webww_check(self):
     inquiry = get_inquiry(current_task.request.hostname)
     inquiry.load_url()
     inquiry.webww_check()
 
-@app.task(bind=True, ignore_result=True)
+@app.task(bind=True, ignore_result=True, name="tasks.p4p_info")
 def p4p_info(self):
     return p4p.market if p4p else 'not initialized yet!'
 
-@app.task(bind=True)
+@app.task(bind=True, name="tasks.power_off")
 def power_off(self):
     os.system('shutdown -s')
 
-@app.task(bind=True)
+@app.task(bind=True, name="tasks.reboot")
 def reboot(self):
     boot_time = pendulum.from_timestamp(psutil.boot_time(), tz='Asia/Shanghai')
     now = pendulum.now()
