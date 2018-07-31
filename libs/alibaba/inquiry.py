@@ -100,7 +100,7 @@ class Inquiry:
             try:
                 if self.browser is None:
                     self.logger.info('open browser and login')
-                    alibaba = Alibaba(self.lid, self.lpwd, None, None, None, headless=False)
+                    alibaba = Alibaba(self.lid, self.lpwd, None, None, None, headless=True)
                     alibaba.login()
                     self.browser = alibaba.browser
                     self.alibaba = alibaba

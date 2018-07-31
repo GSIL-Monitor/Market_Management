@@ -143,7 +143,7 @@ class P4P():
         JSON.serialize(keywords, root, [], fn)
         return keywords
 
-    def crawl(self, group="all", tid=None, socketio=None, tasks=None):
+    def crawl(self, group="all", tid=None, socketio=None, tasks=None, balance_checking=True):
         if tid:
             tasks[tid]['is_running'] = True
             msg = {'name': 'P4P.crawl', 'tid': tid, 'group': group, 'is_last_run': tasks[tid]['is_last_run']}
@@ -201,7 +201,7 @@ class P4P():
                             print('skipped_2')
                             continue
 
-                        [prices, sponsors] = self.find_prices_and_sponsors()
+                        [prices, sponsors] = self.find_prices_and_sponsors(balance_checking=balance_checking)
 
                         if prices:
                             keywords.append([dt, id, kws, grp, prices, sponsors])
@@ -234,7 +234,7 @@ class P4P():
                     del tasks[tid]
                     socketio.emit('event_task_last_run_finished', {'tid': tid}, namespace='/markets', broadcast=True)
 
-    def monitor(self, group='all', tid=None, socketio=None, tasks=None):
+    def monitor(self, group='all', tid=None, socketio=None, tasks=None, balance_checking=True):
         if tid:
             tasks[tid]['is_running'] = True
             msg = {'name': 'P4P.monitor', 'tid': tid, 'group': group, 'is_last_run': tasks[tid]['is_last_run']}
@@ -294,7 +294,7 @@ class P4P():
                             print('skipped_2')
                             continue
 
-                        [prices, sponsors] = self.find_prices_and_sponsors(close=False)
+                        [prices, sponsors] = self.find_prices_and_sponsors(close=False, balance_checking=balance_checking)
 
                         if prices:
                             keywords.append([dt, id, kws, grp, prices, sponsors])
@@ -474,7 +474,7 @@ class P4P():
 
         return {'top_sponsor': top_sponsor, 'sponsor_list': sponsor_list}
 
-    def find_prices_and_sponsors(self, close=True):
+    def find_prices_and_sponsors(self, close=True, balance_checking=True):
         prices = []
         sponsors = None
 
@@ -497,7 +497,8 @@ class P4P():
                     float(price)
                     prices.append(price)
 
-                self.check_balance()
+                if balance_checking:
+                    self.check_balance()
                 break
             except StaleElementReferenceException:
                 #             self.browser.implicitly_wait(0.5)

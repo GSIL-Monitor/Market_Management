@@ -41,14 +41,14 @@ p4p = None
 inquiry = None
 
 @app.task(bind=True, name='tasks.p4p_record')
-def p4p_record(self, group='all'):
+def p4p_record(self, group='all', balance_checking=True):
     p4p = get_p4p(current_task.request.hostname)
-    p4p.crawl(group=group)
+    p4p.crawl(group=group, balance_checking=balance_checking)
 
 @app.task(bind=True, name='tasks.p4p_check')
-def p4p_check(self, group='all'):
+def p4p_check(self, group='all', balance_checking=True):
     p4p = get_p4p(current_task.request.hostname)
-    p4p.monitor(group=group)
+    p4p.monitor(group=group, balance_checking=balance_checking)
 
 @app.task(bind=True, name="tasks.p4p_turn_all_off")
 def p4p_turn_all_off(self, group='all'):
@@ -78,7 +78,7 @@ def power_off(self):
 def reboot(self):
     boot_time = pendulum.from_timestamp(psutil.boot_time(), tz='Asia/Shanghai')
     now = pendulum.now()
-    if (now - boot_time).in_minutes() > 10:
+    if (now - boot_time).in_minutes() > 15:
         os.system("shutdown -t 180 -r -f")
 
 def get_inquiry(node):

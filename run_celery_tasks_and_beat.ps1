@@ -1,6 +1,6 @@
 ﻿$env:FORKED_BY_MULTIPROCESSING=1
-E:
-cd /workspace/python/"Market Management"
+D:
+cd /workspace/"Market Management"
 #Start-Sleep -Seconds 120
 .\venv\Scripts\activate
 start-process celery -ArgumentList "worker -A libs.CeleryTasks.tasks -c 2 -l info -Q Eyelashes_p4p,celery -n Eyelashes[p4p]@localhost"

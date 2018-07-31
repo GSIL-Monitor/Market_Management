@@ -22,7 +22,7 @@ app.conf.beat_schedule = {
     'Eyelashes_p4p_check': {
         'task': 'tasks.p4p_check',
         'schedule': crontab(minute=minutes_0_60_2_0, hour='2-8'),
-        'kwargs': {'group': '直通车App'},
+        'kwargs': {'group': '直通车App', 'balance_checking': False},
         'options': {'queue': 'Eyelashes_p4p'}
     },
     'Eyelashes_p4p_turn_all_off': {
