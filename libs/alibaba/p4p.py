@@ -17,6 +17,7 @@ import arrow
 from datetime import datetime
 from pyquery import PyQuery as pq
 
+import redis
 import json
 import requests
 import time
@@ -42,7 +43,7 @@ class P4P():
     api = 'https://www2.alibaba.com/manage_ad_keyword.htm'
     keywords_list = {}
     
-    def __init__(self, market, lid, lpwd, socketio=None, namespace=None, room=None):
+    def __init__(self, market, lid, lpwd, broker_url=None, socketio=None, namespace=None, room=None, headless=True):
         self.logger = logging.getLogger(market['name'])
         self.logger.setLevel(logging.DEBUG)
         fh = TimedRotatingFileHandler('log/p4p['+market['name']+'].log', when="d", interval=1,  backupCount=7)
@@ -52,6 +53,7 @@ class P4P():
 
         self.lid = lid
         self.lpwd = lpwd
+        self.broker_url = broker_url
         self.socketio = socketio
         self.namespace = namespace
         self.room = room
@@ -62,6 +64,7 @@ class P4P():
         self.load_keywords('recording')
         self.load_keywords('monitor')
 
+        self.headless = headless
         self.browser = None
         # self.logger.info('open browser and login')
         # alibaba = Alibaba(lid, lpwd, socketio, namespace, room)
@@ -72,6 +75,7 @@ class P4P():
         self.recent_prices = {}
 
         self.balance = None
+        self.initial_balance = 300
         self.default_position = 5
         self.kws_tracking = {}
 
@@ -143,7 +147,7 @@ class P4P():
         JSON.serialize(keywords, root, [], fn)
         return keywords
 
-    def crawl(self, group="all", tid=None, socketio=None, tasks=None, balance_checking=True):
+    def crawl(self, group="all", tid=None, socketio=None, tasks=None):
         if tid:
             tasks[tid]['is_running'] = True
             msg = {'name': 'P4P.crawl', 'tid': tid, 'group': group, 'is_last_run': tasks[tid]['is_last_run']}
@@ -201,7 +205,7 @@ class P4P():
                             print('skipped_2')
                             continue
 
-                        [prices, sponsors] = self.find_prices_and_sponsors(balance_checking=balance_checking)
+                        [prices, sponsors] = self.find_prices_and_sponsors()
 
                         if prices:
                             keywords.append([dt, id, kws, grp, prices, sponsors])
@@ -234,7 +238,7 @@ class P4P():
                     del tasks[tid]
                     socketio.emit('event_task_last_run_finished', {'tid': tid}, namespace='/markets', broadcast=True)
 
-    def monitor(self, group='all', tid=None, socketio=None, tasks=None, balance_checking=True):
+    def monitor(self, group='all', tid=None, socketio=None, tasks=None):
         if tid:
             tasks[tid]['is_running'] = True
             msg = {'name': 'P4P.monitor', 'tid': tid, 'group': group, 'is_last_run': tasks[tid]['is_last_run']}
@@ -294,7 +298,7 @@ class P4P():
                             print('skipped_2')
                             continue
 
-                        [prices, sponsors] = self.find_prices_and_sponsors(close=False, balance_checking=balance_checking)
+                        [prices, sponsors] = self.find_prices_and_sponsors(close=False)
 
                         if prices:
                             keywords.append([dt, id, kws, grp, prices, sponsors])
@@ -358,7 +362,7 @@ class P4P():
             try:
                 if self.browser is None:
                     self.logger.info('open browser and login')
-                    alibaba = Alibaba(self.lid, self.lpwd, None, None, None, headless=True)
+                    alibaba = Alibaba(self.lid, self.lpwd, None, None, None, headless=self.headless)
                     alibaba.login()
                     self.browser = alibaba.browser
                     self.alibaba = alibaba
@@ -474,7 +478,7 @@ class P4P():
 
         return {'top_sponsor': top_sponsor, 'sponsor_list': sponsor_list}
 
-    def find_prices_and_sponsors(self, close=True, balance_checking=True):
+    def find_prices_and_sponsors(self, close=True):
         prices = []
         sponsors = None
 
@@ -497,8 +501,7 @@ class P4P():
                     float(price)
                     prices.append(price)
 
-                if balance_checking:
-                    self.check_balance()
+                self.check_balance()
                 break
             except StaleElementReferenceException:
                 #             self.browser.implicitly_wait(0.5)
@@ -572,17 +575,36 @@ class P4P():
     def check_balance(self):
         balance = self.browser.find_element_by_css_selector(
             '.sc-manage-edit-price-dialog span[data-role="span-balance"]').text
-        if self.balance is None:
-            self.balance = balance
-        elif self.balance != balance:
-            diff = format(float(self.balance) - float(balance), '.2f')
-            self.balance = balance
 
-            time_str = arrow.now().format('YYYY-MM-DD HH:mm:ss')
-            date_str = time_str.split(' ')[0]
-            root = self.market['directory'] + '_config'
-            fn = 'p4p_balance_change_history_'+date_str+'.json.gz'
-            JSON.serialize([time_str, diff], root, [], fn, append=True)
+        if self.broker_url:
+            r = redis.StrictRedis.from_url(self.broker_url)
+            self.balance = r.getset(self.market['name']+'_p4p_balance', balance)
+            if float(balance) == self.initial_balance or self.balance is not None:
+                return
+            else:
+                self.balance = self.balance.decode()
+                if self.balance != balance:
+                    diff = format(float(self.balance) - float(balance), '.2f')
+
+                    time_str = arrow.now().format('YYYY-MM-DD HH:mm:ss')
+                    date_str = time_str.split(' ')[0]
+                    root = self.market['directory'] + '_config'
+                    fn = 'p4p_balance_change_history_' + date_str + '.json.gz'
+                    JSON.serialize([time_str, diff], root, [], fn, append=True)
+        else:
+            if self.balance is None:
+                self.balance = balance
+            elif float(balance) == self.initial_balance:
+                return
+            elif self.balance != balance:
+                diff = format(float(self.balance) - float(balance), '.2f')
+                self.balance = balance
+
+                time_str = arrow.now().format('YYYY-MM-DD HH:mm:ss')
+                date_str = time_str.split(' ')[0]
+                root = self.market['directory'] + '_config'
+                fn = 'p4p_balance_change_history_'+date_str+'.json.gz'
+                JSON.serialize([time_str, diff], root, [], fn, append=True)
 
     def next_page(self):
         success = True

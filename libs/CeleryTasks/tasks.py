@@ -41,14 +41,14 @@ p4p = None
 inquiry = None
 
 @app.task(bind=True, name='tasks.p4p_record')
-def p4p_record(self, group='all', balance_checking=True):
+def p4p_record(self, group='all'):
     p4p = get_p4p(current_task.request.hostname)
-    p4p.crawl(group=group, balance_checking=balance_checking)
+    p4p.crawl(group=group)
 
 @app.task(bind=True, name='tasks.p4p_check')
-def p4p_check(self, group='all', balance_checking=True):
+def p4p_check(self, group='all'):
     p4p = get_p4p(current_task.request.hostname)
-    p4p.monitor(group=group, balance_checking=balance_checking)
+    p4p.monitor(group=group)
 
 @app.task(bind=True, name="tasks.p4p_turn_all_off")
 def p4p_turn_all_off(self, group='all'):
@@ -81,6 +81,11 @@ def reboot(self):
     if (now - boot_time).in_minutes() > 15:
         os.system("shutdown -t 180 -r -f")
 
+@app.task(bind=True, name="tasks.add")
+def add(self, x, y):
+    print('===>', app.conf.broker_url)
+    return x+y
+
 def get_inquiry(node):
     global inquiry
     if inquiry is not None:
@@ -96,7 +101,7 @@ def get_inquiry(node):
     else:
         for account in market['accounts']:
             if lname == account['lname']:
-                inquiry = P4P(market, account)
+                inquiry = inquiry(market, account)
     return inquiry
 
 def get_p4p(node):
@@ -113,11 +118,22 @@ def get_p4p(node):
         lid = market['lid']
         lpwd = market['lpwd']
         lname = market['lname']
-        p4p = P4P(market, lid, lpwd)
+        p4p = P4P(market, lid, lpwd, broker_url=app.conf.broker_url)
     else:
         for account in market['accounts']:
             if lname == account['lname']:
                 lid = account['lid']
                 lpwd = account['lpwd']
-                p4p = P4P(market, lid, lpwd)
+                p4p = P4P(market, lid, lpwd, broker_url=app.conf.broker_url)
     return p4p
+
+def get_market():
+    global p4p
+    if p4p is not None:
+        return p4p.market
+
+    global inquiry
+    if inquiry is not None:
+        return inquiry.market
+
+    return None

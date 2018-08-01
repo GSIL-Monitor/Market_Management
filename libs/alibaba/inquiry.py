@@ -41,7 +41,7 @@ class Inquiry:
     tracking_ids = None
     reply_templates = {}
 
-    def __init__(self, market, account=None, socketio=None, namespace=None, room=None):
+    def __init__(self, market, account=None, headless=True, socketio=None, namespace=None, room=None):
         self.logger = logging.getLogger(market['name'])
         self.logger.setLevel(logging.DEBUG)
         fh = TimedRotatingFileHandler('log/inquiry['+market['name']+'].log', when="d", interval=1,  backupCount=7)
@@ -63,6 +63,7 @@ class Inquiry:
         self.account['lpwd'] = self.lpwd
         self.account['lname'] = self.lname
 
+        self.headless = headless
         self.reply_js_template = "document.getElementById('tinymce').innerHTML = `{message}`;"
         self.webww_reply_js_template = "document.getElementById('tinymce').innerHTML = `{message}`;"
         self.load_tracking_ids()
@@ -100,7 +101,7 @@ class Inquiry:
             try:
                 if self.browser is None:
                     self.logger.info('open browser and login')
-                    alibaba = Alibaba(self.lid, self.lpwd, None, None, None, headless=True)
+                    alibaba = Alibaba(self.lid, self.lpwd, None, None, None, headless=self.headless)
                     alibaba.login()
                     self.browser = alibaba.browser
                     self.alibaba = alibaba
