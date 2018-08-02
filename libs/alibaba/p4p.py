@@ -579,7 +579,8 @@ class P4P():
         if self.broker_url:
             r = redis.StrictRedis.from_url(self.broker_url)
             self.balance = r.getset(self.market['name']+'_p4p_balance', balance)
-            if float(balance) == self.initial_balance or self.balance is not None:
+
+            if float(balance) == self.initial_balance or self.balance is None:
                 return
             else:
                 self.balance = self.balance.decode()

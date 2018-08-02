@@ -97,11 +97,11 @@ def get_inquiry(node):
     market = JSON.deserialize('.', 'storage', 'markets.json')[market_name]
 
     if lname is None or lname == market['lname']:
-        inquiry = Inquiry(market)
+        inquiry = Inquiry(market, headless=False)
     else:
         for account in market['accounts']:
             if lname == account['lname']:
-                inquiry = inquiry(market, account)
+                inquiry = inquiry(market, account, headless=False)
     return inquiry
 
 def get_p4p(node):
