@@ -9,6 +9,7 @@ import os
 
 from libs.alibaba.p4p import P4P
 from libs.alibaba.inquiry import Inquiry
+from libs.others.osoeco import OSOECO
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
@@ -80,6 +81,19 @@ def reboot(self):
     now = pendulum.now()
     if (now - boot_time).in_minutes() > 15:
         os.system("shutdown -t 180 -r -f")
+
+@app.task(bind=True, name="tasks.osoeco_checkin")
+def osoeco_checkin(self):
+    browser = None
+    global p4p
+    if p4p is not None:
+        browser = p4p.browser
+
+    global inquiry
+    if inquiry is not None:
+        browser = inquiry.browser
+
+    OSOECO.checkin(browser)
 
 @app.task(bind=True, name="tasks.add")
 def add(self, x, y):
