@@ -43,7 +43,7 @@ class P4P():
     api = 'https://www2.alibaba.com/manage_ad_keyword.htm'
     keywords_list = {}
     
-    def __init__(self, market, lid, lpwd, broker_url=None, socketio=None, namespace=None, room=None, headless=True):
+    def __init__(self, market, lid, lpwd, broker_url=None, headless=True, browser=None):
         self.logger = logging.getLogger(market['name'])
         self.logger.setLevel(logging.DEBUG)
         fh = TimedRotatingFileHandler('log/p4p['+market['name']+'].log', when="d", interval=1,  backupCount=7)
@@ -54,9 +54,6 @@ class P4P():
         self.lid = lid
         self.lpwd = lpwd
         self.broker_url = broker_url
-        self.socketio = socketio
-        self.namespace = namespace
-        self.room = room
 
         self.logger.info('initialize .... '+market['name'])
         self.market = market
@@ -64,8 +61,9 @@ class P4P():
         self.load_keywords('recording')
         self.load_keywords('monitor')
 
+        self.alibaba = None
         self.headless = headless
-        self.browser = None
+        self.browser = browser
         # self.logger.info('open browser and login')
         # alibaba = Alibaba(lid, lpwd, socketio, namespace, room)
         # alibaba.login()
@@ -147,24 +145,15 @@ class P4P():
         JSON.serialize(keywords, root, [], fn)
         return keywords
 
-    def crawl(self, group="all", tid=None, socketio=None, tasks=None):
-        if tid:
-            tasks[tid]['is_running'] = True
-            msg = {'name': 'P4P.crawl', 'tid': tid, 'group': group, 'is_last_run': tasks[tid]['is_last_run']}
-            socketio.emit('event_task_start_running', msg, namespace='/markets', broadcast=True)
+    def crawl(self, group="all"):
 
         try:
             keywords = []
             # self.load_keywords('recording')
-            if tid:
-                tasks[tid]['progress'] = 1
-                socketio.emit('event_task_progress', {'tid': tid, 'progress': 1}, namespace='/markets', broadcast=True)
+
             with self.lock:
                 self.load_url()
-                if tid:
-                    tasks[tid]['progress'] = 2
-                    socketio.emit('event_task_progress', {'tid': tid, 'progress': 2}, namespace='/markets',
-                                  broadcast=True)
+
                 # all_kws_count = int(self.browser.find_element_by_css_selector('a.all-kwcount span').text)
                 all_kws_count = self.switch_to_group(group)
 
@@ -178,10 +167,6 @@ class P4P():
                     has_checked = False
                     for idx, tr in enumerate(trs):
                         kws_count += 1
-                        if tid:
-                            tasks[tid]['progress'] = int(kws_count / all_kws_count * 97) + 3
-                            socketio.emit('event_task_progress', {'tid': tid, 'progress': tasks[tid]['progress']},
-                                          namespace='/markets', broadcast=True)
 
                         print('index:', idx, len(trs), end=' > ')
                         ActionChains(self.browser).move_to_element(tr).perform()
@@ -220,10 +205,7 @@ class P4P():
 
                     if not self.next_page():
                         break
-            if tid:
-                tasks[tid]['progress'] = 100
-                socketio.emit('event_task_progress', {'tid': tid, 'progress': 100}, namespace='/markets',
-                              broadcast=True)
+
             if keywords:
                 self.save_crawling_result(keywords)
 
@@ -231,32 +213,17 @@ class P4P():
             print('Error: ', e)
             traceback.print_exc()
         finally:
-            if tid:
-                tasks[tid]['is_running'] = False
-                tasks[tid]['progress'] = 0
-                if tasks[tid]['is_last_run']:
-                    del tasks[tid]
-                    socketio.emit('event_task_last_run_finished', {'tid': tid}, namespace='/markets', broadcast=True)
+            pass
 
-    def monitor(self, group='all', tid=None, socketio=None, tasks=None):
-        if tid:
-            tasks[tid]['is_running'] = True
-            msg = {'name': 'P4P.monitor', 'tid': tid, 'group': group, 'is_last_run': tasks[tid]['is_last_run']}
-            socketio.emit('event_task_start_running', msg, namespace='/markets', broadcast=True)
-
+    def monitor(self, group='all'):
         try:
             print('Task Monitor start to run with group="' + group + '"')
             keywords = []
             # self.load_keywords('monitor')
-            if tid:
-                tasks[tid]['progress'] = 1
-                socketio.emit('event_task_progress', {'tid': tid, 'progress': 1}, namespace='/markets', broadcast=True)
+
             with self.lock:
                 self.load_url()
-                if tid:
-                    tasks[tid]['progress'] = 2
-                    socketio.emit('event_task_progress', {'tid': tid, 'progress': 2}, namespace='/markets',
-                                  broadcast=True)
+
                 # all_kws_count = int(self.browser.find_element_by_css_selector('a.all-kwcount span').text)
                 print('switch to group:', group)
                 all_kws_count = self.switch_to_group(group)
@@ -271,10 +238,6 @@ class P4P():
                     has_checked = False
                     for idx, tr in enumerate(trs):
                         kws_count += 1
-                        if tid:
-                            tasks[tid]['progress'] = int(kws_count / all_kws_count * 97) + 3
-                            socketio.emit('event_task_progress', {'tid': tid, 'progress': tasks[tid]['progress']},
-                                          namespace='/markets', broadcast=True)
 
                         print('index:', idx, len(trs), end=' > ')
                         ActionChains(self.browser).move_to_element(tr).perform()
@@ -336,20 +299,12 @@ class P4P():
 
             if keywords:
                 self.save_crawling_result(keywords)
-            if tid:
-                tasks[tid]['progress'] = 100
-                socketio.emit('event_task_progress', {'tid': tid, 'progress': 100}, namespace='/markets',
-                              broadcast=True)
+
         except Exception as e:
             print('Error: ', e)
             traceback.print_exc()
         finally:
-            if tid:
-                tasks[tid]['is_running'] = False
-                tasks[tid]['progress'] = 0
-                if tasks[tid]['is_last_run']:
-                    del tasks[tid]
-                    socketio.emit('event_task_last_run_finished', {'tid': tid}, namespace='/markets', broadcast=True)
+            pass
 
     def save_crawling_result(self, keywords):
         root = self.market['directory'] + '_config'
@@ -360,11 +315,12 @@ class P4P():
     def load_url(self):
         while True:
             try:
-                if self.browser is None:
+                if self.alibaba is None:
                     self.logger.info('open browser and login')
-                    alibaba = Alibaba(self.lid, self.lpwd, None, None, None, headless=self.headless)
+                    alibaba = Alibaba(self.lid, self.lpwd, headless=self.headless, browser=self.browser)
                     alibaba.login()
-                    self.browser = alibaba.browser
+                    if self.browser is None:
+                        self.browser = alibaba.browser
                     self.alibaba = alibaba
 
                 self.browser.get(self.api)
@@ -480,7 +436,6 @@ class P4P():
 
     def find_prices_and_sponsors(self, close=True):
         prices = []
-        sponsors = None
 
         kws = self.browser.find_element_by_css_selector(
             '.sc-manage-edit-price-dialog span[data-role="span-keyword"]').text.strip()
@@ -806,100 +761,3 @@ class P4P():
                 if tasks[tid]['is_last_run']:
                     del tasks[tid]
                     socketio.emit('event_task_last_run_finished', {'tid': tid}, namespace='/markets', broadcast=True)
-
-    # def find_prices(self, tr=None, close=True):  # @redo: 相关度不足，无法进入搜索前5名。
-    #     if tr and not self.open_price_dialog(tr):
-    #         return []
-    #
-    #     prices = []
-    #     WebDriverWait(self.browser, 15).until(
-    #         EC.invisibility_of_element_located((By.CSS_SELECTOR, 'div.bp-loading-panel')))
-    #
-    #     while True:
-    #         try:
-    #             price_table_tbody_selector = ".sc-manage-edit-price-dialog table tbody,.sc-manage-edit-price-dialog p.util-clearfix"
-    #             price_table_tbody = WebDriverWait(self.browser, 15).until(
-    #                 EC.presence_of_element_located((By.CSS_SELECTOR, price_table_tbody_selector)))
-    #
-    #             if price_table_tbody.tag_name == 'p':
-    #                 prices = None
-    #                 break
-    #
-    #             for btn in price_table_tbody.find_elements_by_css_selector('a'):
-    #                 price = btn.text.strip()
-    #                 float(price)
-    #                 prices.append(price)
-    #
-    #             print(prices, end=">")
-    #
-    #             self.check_balance()
-    #             break
-    #         except StaleElementReferenceException:
-    #             self.browser.implicitly_wait(0.5)
-    #             continue
-    #         except ValueError:
-    #             prices = []
-    #             break
-    #     if close:
-    #         webdriver.ActionChains(self.browser).send_keys(Keys.ESCAPE).perform()
-    #     return prices
-
-    # def find_sponsors_backup(self, kws):
-    #     with self.lock:
-    #         url = 'https://www.alibaba.com/trade/search?fsb=y&IndexArea=product_en&viewtype=L&CatId=&SearchText='+re.sub(' +', '+', kws)
-    #
-    #         if len(self.browser.window_handles) == 1:
-    #             self.browser.execute_script("window.open()")
-    #         self.browser.switch_to_window(self.browser.window_handles[1])
-    #
-    #         top_sponsor = None
-    #         sponsor_list = []
-    #
-    #         try:
-    #             self.browser.get(url)
-    #             css_selector = "div.m-product-item .item-extra, div.m-product-item .brand-right-container"
-    #             WebDriverWait(self.browser, 15).until(EC.presence_of_element_located((By.CSS_SELECTOR, css_selector)))
-    #
-    #             html = self.browser.page_source
-    #             soup = BeautifulSoup(html, 'html.parser')
-    #
-    #             divs = soup.find_all('div', class_='m-product-item')
-    #             for idx,div in enumerate(divs):
-    #                 # print(kws, idx)
-    #                 company = {}
-    #                 extra = div.find(class_='item-extra')
-    #                 if extra:
-    #                     a = extra.find('div', class_='stitle').a
-    #                     company['years'] = re.search('year-num(\d+)', str(a.i)).group(1)
-    #                     a = a.next_sibling.next_sibling
-    #                     company['name'] = a.string.strip()
-    #                     company['url'] = 'https:' + a['href']
-    #                     ul = extra.find('ul', class_='record')
-    #                 else:
-    #                     container = div.find('div', class_='brand-right-container')
-    #                     text = str(container.find('i', class_='year-num'))
-    #                     company['years'] = re.search('year-num(\d+)', text).group(1)
-    #                     a = container.find('div', class_='supplier').a
-    #                     company['name'] = a.string.strip()
-    #                     company['url'] = 'https:' + a['href']
-    #                     ul = container.find('ul', class_='record-container')
-    #
-    #                 if ul:
-    #                     company['record'] = [re.sub('\n', '', x).strip() for x in ul.findAll(text=True) if x != '\n']
-    #
-    #                 if div.find('span', class_='sking'):
-    #                     top_sponsor = company
-    #                 elif div.find('span', class_='sl'):
-    #                     sponsor_list.append(company)
-    #                 else:
-    #                     break
-    #
-    #         except Exception as e:
-    #             print('Error: ', e)
-    #             traceback.print_exc()
-    #         finally:
-    #             # self.browser.execute_script("window.close()")
-    #             self.browser.switch_to_window(self.browser.window_handles[0])
-    #
-    #     return {'top_sponsor': top_sponsor, 'sponsor_list': sponsor_list}
-

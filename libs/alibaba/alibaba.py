@@ -40,13 +40,13 @@ class Alibaba:
     chrome_options_headless.add_argument('--disable-infobars')
     chrome_options_headless.add_argument('--ignore-certificate-errors')
 
-    def __init__(self, user, password, socketio=None, namespace=None, room=None, headless=False, proxy=None):
+    def __init__(self, user, password, headless=False, proxy=None, browser=None):
         self.user = user
         self.password = password
-        self.socketio = socketio
-        self.namespace = namespace
-        self.room = room
-        if headless:
+
+        if browser:
+            self.browser = browser
+        elif headless:
             if proxy:
                 self.chrome_options_headless.add_argument('--proxy-server='+proxy)
             self.browser = webdriver.Chrome(chrome_options=self.chrome_options_headless)
@@ -58,13 +58,7 @@ class Alibaba:
             self.browser.maximize_window()
 
     def notify(self, typo, message):
-        if self.socketio:
-            if '_' in typo:
-                self.socketio.emit(typo, message, namespace=self.namespace, room=self.room)
-            else:
-                self.socketio.emit('notify', dict(type=typo, content=message), namespace=self.namespace, room=self.room)
-        else:
-            print(typo, message)
+        print(typo, message)
 
     def login(self):
         try:

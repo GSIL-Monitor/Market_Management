@@ -41,7 +41,7 @@ class Inquiry:
     tracking_ids = None
     reply_templates = {}
 
-    def __init__(self, market, account=None, headless=True, socketio=None, namespace=None, room=None):
+    def __init__(self, market, account=None, headless=True, browser=None):
         self.logger = logging.getLogger(market['name'])
         self.logger.setLevel(logging.DEBUG)
         fh = TimedRotatingFileHandler('log/inquiry['+market['name']+'].log', when="d", interval=1,  backupCount=7)
@@ -54,15 +54,14 @@ class Inquiry:
         self.lid = account['lid'] if account else market['lid']
         self.lpwd = account['lpwd'] if account else market['lpwd']
         self.lname = account['lname'] if account else market['lname']
-        self.socketio = socketio
-        self.namespace = namespace
-        self.room = room
 
         self.account = {}
         self.account['lid'] = self.lid
         self.account['lpwd'] = self.lpwd
         self.account['lname'] = self.lname
 
+        self.alibaba = None
+        self.browser = browser
         self.headless = headless
         self.reply_js_template = "document.getElementById('tinymce').innerHTML = `{message}`;"
         self.webww_reply_js_template = "document.getElementById('tinymce').innerHTML = `{message}`;"
@@ -80,17 +79,11 @@ class Inquiry:
                 break
 
     def notify(self, typo, message):
-        if self.socketio:
-            if '_' in typo:
-                self.socketio.emit(typo, message, namespace=self.namespace, room=self.room)
-            else:
-                self.socketio.emit('notify', dict(type=typo, content=message), namespace=self.namespace, room=self.room)
-        else:
-            print(typo, message)
+        print(typo, message)
 
     def login(self):
         if self.browser is None:
-            self.alibaba = Alibaba(self.lid, self.lpwd, None, None, None, headless=False)
+            self.alibaba = Alibaba(self.lid, self.lpwd, headless=self.headless, browser=self.browser)
             self.alibaba.login()
             self.browser = self.alibaba.browser
         else:
@@ -99,11 +92,12 @@ class Inquiry:
     def load_url(self):
         while True:
             try:
-                if self.browser is None:
+                if self.alibaba is None:
                     self.logger.info('open browser and login')
-                    alibaba = Alibaba(self.lid, self.lpwd, None, None, None, headless=self.headless)
+                    alibaba = Alibaba(self.lid, self.lpwd, headless=self.headless, browser=self.browser)
                     alibaba.login()
-                    self.browser = alibaba.browser
+                    if self.browser is None:
+                        self.browser = alibaba.browser
                     self.alibaba = alibaba
 
                 self.browser.get(self.api)
@@ -414,52 +408,20 @@ class Inquiry:
         btn_send.click()
         return True
 
-    def check(self, group=None, tid=None, socketio=None, tasks=None):
-        if tid:
-            tasks[tid]['is_running'] = True
-            msg = {'name': 'P4P.crawl', 'tid': tid, 'group': group, 'is_last_run': tasks[tid]['is_last_run']}
-            socketio.emit('event_task_start_running', msg, namespace='/markets', broadcast=True)
-        if tid:
-            tasks[tid]['progress'] = 1
-            socketio.emit('event_task_progress', {'tid': tid, 'progress': 1}, namespace='/markets', broadcast=True)
-
+    def check(self):
         self.load_url()
 
         self.load_tracking_ids()
 
-        if tid:
-            tasks[tid]['progress'] = 15
-            socketio.emit('event_task_progress', {'tid': tid, 'progress': 15}, namespace='/markets', broadcast=True)
-
         time.sleep(0.1)
         inquiries = self.get_inquiries()
 
-        if tid:
-            tasks[tid]['progress'] = 20
-            socketio.emit('event_task_progress', {'tid': tid, 'progress': 20}, namespace='/markets', broadcast=True)
-
-        count = len(inquiries)
-
-        idx = 0
         for enquiry in inquiries:
-            idx += 1
-            if tid:
-                progress = 20 + 80*idx/count
-                tasks[tid]['progress'] = progress
-                socketio.emit('event_task_progress', {'tid': tid, 'progress': progress}, namespace='/markets', broadcast=True)
-
             if not self.is_auto_reply_needed(enquiry):
                 continue
 
             print('enquiry ' + enquiry['id'] + ' reply is needed')
             self.reply(enquiry)
-
-        if tid:
-            tasks[tid]['is_running'] = False
-            tasks[tid]['progress'] = 0
-            if tasks[tid]['is_last_run']:
-                del tasks[tid]
-                socketio.emit('event_task_last_run_finished', {'tid': tid}, namespace='/markets', broadcast=True)
 
     def webww_check(self):
         threads = []
