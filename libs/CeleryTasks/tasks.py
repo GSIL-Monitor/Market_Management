@@ -40,6 +40,27 @@ app.config_from_object('conf.celeryconfig')
 
 p4p = None
 inquiry = None
+browser = None
+
+user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36'
+
+chrome_options = webdriver.ChromeOptions()
+chrome_options.add_argument('--disable-gpu')
+chrome_options.add_argument('--disable-software-rasterizer')
+chrome_options.add_argument('--disable-extensions')
+chrome_options.add_argument('--disable-logging')
+chrome_options.add_argument('--disable-infobars')
+chrome_options.add_argument('--ignore-certificate-errors')
+
+chrome_options_headless = webdriver.ChromeOptions()
+chrome_options_headless.add_argument('--headless')
+chrome_options_headless.add_argument('--user-agent="' + user_agent + '"')
+chrome_options_headless.add_argument('--disable-gpu')
+chrome_options_headless.add_argument('--disable-software-rasterizer')
+chrome_options_headless.add_argument('--disable-extensions')
+chrome_options_headless.add_argument('--disable-logging')
+chrome_options_headless.add_argument('--disable-infobars')
+chrome_options_headless.add_argument('--ignore-certificate-errors')
 
 @app.task(bind=True, name='tasks.p4p_record')
 def p4p_record(self, group='all'):
@@ -84,14 +105,10 @@ def reboot(self):
 
 @app.task(bind=True, name="tasks.osoeco_checkin")
 def osoeco_checkin(self):
-    browser = None
-    global p4p
-    if p4p is not None:
-        browser = p4p.browser
-
-    global inquiry
-    if inquiry is not None:
-        browser = inquiry.browser
+    global browser
+    if not browser:
+        browser = webdriver.Chrome(chrome_options=chrome_options)
+        browser.set_window_size(1920, 1200)
 
     OSOECO.checkin(browser)
 
@@ -102,6 +119,8 @@ def add(self, x, y):
 
 def get_inquiry(node):
     global inquiry
+    global browser
+
     if inquiry is not None:
         return inquiry
 
@@ -111,15 +130,19 @@ def get_inquiry(node):
     market = JSON.deserialize('.', 'storage', 'markets.json')[market_name]
 
     if lname is None or lname == market['lname']:
-        inquiry = Inquiry(market, headless=False)
+        inquiry = Inquiry(market, headless=False, browser=browser)
     else:
         for account in market['accounts']:
             if lname == account['lname']:
-                inquiry = inquiry(market, account, headless=False)
+                inquiry = inquiry(market, account, headless=False, browser=browser)
+    if not browser:
+        browser = inquiry.browser
     return inquiry
 
 def get_p4p(node):
     global p4p
+    global browser
+
     if p4p is not None:
         return p4p
 
@@ -132,13 +155,15 @@ def get_p4p(node):
         lid = market['lid']
         lpwd = market['lpwd']
         lname = market['lname']
-        p4p = P4P(market, lid, lpwd, broker_url=app.conf.broker_url)
+        p4p = P4P(market, lid, lpwd, broker_url=app.conf.broker_url, browser=browser)
     else:
         for account in market['accounts']:
             if lname == account['lname']:
                 lid = account['lid']
                 lpwd = account['lpwd']
-                p4p = P4P(market, lid, lpwd, broker_url=app.conf.broker_url)
+                p4p = P4P(market, lid, lpwd, broker_url=app.conf.broker_url, browser=browser)
+    if not browser:
+        browser = p4p.browser
     return p4p
 
 def get_market():
