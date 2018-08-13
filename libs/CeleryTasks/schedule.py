@@ -68,11 +68,10 @@ app.conf.beat_schedule = {
         'task': 'tasks.reboot',
         'schedule': crontab(minute='20', hour='17'),
         'options': {'queue': 'celery'}
+    },
+    'OSOECO_checkin': {
+        'task': 'tasks.osoeco_checkin',
+        'schedule': crontab(minute='23', hour='9'),
+        'options': {'queue': 'celery'}
     }
-    # ,
-    # 'OSOECO_checkin': {
-    #     'task': 'tasks.osoeco_checkin',
-    #     'schedule': crontab(minute='23', hour='9'),
-    #     'options': {'queue': 'celery'}
-    # }
 }

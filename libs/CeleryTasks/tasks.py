@@ -38,9 +38,7 @@ import threading
 app = Celery('tasks')
 app.config_from_object('conf.celeryconfig')
 
-p4p = None
-inquiry = None
-browser = None
+app_data = {'p4p':None, 'inquiry':None, 'browser': None}
 
 user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36'
 
@@ -88,10 +86,6 @@ def webww_check(self):
     inquiry.load_url()
     inquiry.webww_check()
 
-@app.task(bind=True, ignore_result=True, name="tasks.p4p_info")
-def p4p_info(self):
-    return p4p.market if p4p else 'not initialized yet!'
-
 @app.task(bind=True, name="tasks.power_off")
 def power_off(self):
     os.system('shutdown -s')
@@ -105,12 +99,11 @@ def reboot(self):
 
 @app.task(bind=True, name="tasks.osoeco_checkin")
 def osoeco_checkin(self):
-    global browser
-    if not browser:
+    if app_data['browser'] is None:
         browser = webdriver.Chrome(chrome_options=chrome_options)
         browser.set_window_size(1920, 1200)
-
-    OSOECO.checkin(browser)
+        app_data['browser'] = browser
+    OSOECO.checkin(app_data['browser'])
 
 @app.task(bind=True, name="tasks.add")
 def add(self, x, y):
@@ -118,11 +111,9 @@ def add(self, x, y):
     return x+y
 
 def get_inquiry(node):
-    global inquiry
-    global browser
 
-    if inquiry is not None:
-        return inquiry
+    if app_data['inquiry'] is not None:
+        return app_data['inquiry']
 
     text = node.split('@')[0]
     market_name = text.split(':')[0].split('[')[0]
@@ -130,21 +121,20 @@ def get_inquiry(node):
     market = JSON.deserialize('.', 'storage', 'markets.json')[market_name]
 
     if lname is None or lname == market['lname']:
-        inquiry = Inquiry(market, headless=False, browser=browser)
+        inquiry = Inquiry(market, headless=False, browser=app_data['browser'])
     else:
         for account in market['accounts']:
             if lname == account['lname']:
-                inquiry = inquiry(market, account, headless=False, browser=browser)
-    if not browser:
-        browser = inquiry.browser
+                inquiry = inquiry(market, account, headless=False, browser=app_data['browser'])
+
+    app_data['inquiry'] = inquiry
+    app_data['browser'] = inquiry.browser
     return inquiry
 
 def get_p4p(node):
-    global p4p
-    global browser
 
-    if p4p is not None:
-        return p4p
+    if app_data['p4p'] is not None:
+        return app_data['p4p']
 
     text = node.split('@')[0]
     market_name = text.split(':')[0].split('[')[0]
@@ -155,24 +145,25 @@ def get_p4p(node):
         lid = market['lid']
         lpwd = market['lpwd']
         lname = market['lname']
-        p4p = P4P(market, lid, lpwd, broker_url=app.conf.broker_url, browser=browser)
+        p4p = P4P(market, lid, lpwd, broker_url=app.conf.broker_url, browser=app_data['browser'], headless=False)
     else:
         for account in market['accounts']:
             if lname == account['lname']:
                 lid = account['lid']
                 lpwd = account['lpwd']
-                p4p = P4P(market, lid, lpwd, broker_url=app.conf.broker_url, browser=browser)
-    if not browser:
-        browser = p4p.browser
+                p4p = P4P(market, lid, lpwd, broker_url=app.conf.broker_url, browser=app_data['browser'], headless=False)
+
+    app_data['p4p'] = p4p
+    app_data['browser'] = p4p.browser
     return p4p
 
 def get_market():
-    global p4p
-    if p4p is not None:
-        return p4p.market
+
+    if app_data['p4p'] is not None:
+        return app_data['p4p'].market
 
     global inquiry
-    if inquiry is not None:
-        return inquiry.market
+    if app_data['inquiry'] is not None:
+        return app_data['inquiry'].market
 
     return None

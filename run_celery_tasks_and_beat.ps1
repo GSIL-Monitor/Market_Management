@@ -5,9 +5,9 @@ Start-Sleep -Seconds 120
 .\venv\Scripts\activate
 start-process celery -WindowStyle Hidden -ArgumentList "worker -A libs.CeleryTasks.tasks -c 2 -l info -Q Eyelashes_p4p,celery -n Eyelashes[p4p]@localhost"
 start-process celery -WindowStyle Hidden -ArgumentList "worker -A libs.CeleryTasks.tasks -c 1 -l info -Q Tools_p4p,celery -n Tools[p4p]@localhost"
-start-process celery -ArgumentList "worker -A libs.CeleryTasks.tasks -c 1 -l info -Q Eyelashes_inquiry,celery -n Eyelashes[inquiry]@localhost"
-start-process celery -ArgumentList "worker -A libs.CeleryTasks.tasks -c 1 -l info -Q Tools_webww,celery -n Tools[webww]@localhost"
-start-process celery -ArgumentList "worker -A libs.CeleryTasks.tasks -c 1 -l info -Q Eyelashes_webww,celery -n Eyelashes[webww]@localhost"
+start-process celery -WindowStyle Hidden -ArgumentList "worker -A libs.CeleryTasks.tasks -c 1 -l info -Q Eyelashes_inquiry,celery -n Eyelashes[inquiry]@localhost"
+start-process celery -WindowStyle Hidden -ArgumentList "worker -A libs.CeleryTasks.tasks -c 1 -l info -Q Tools_webww,celery -n Tools[webww]@localhost"
+start-process celery -WindowStyle Hidden -ArgumentList "worker -A libs.CeleryTasks.tasks -c 1 -l info -Q Eyelashes_webww,celery -n Eyelashes[webww]@localhost"
 
-start-process celery -ArgumentList "beat -A libs.CeleryTasks.schedule -l info --pidfile="
+start-process celery -WindowStyle Hidden -ArgumentList "beat -A libs.CeleryTasks.schedule -l info --pidfile="
 start-process flower -WindowStyle Hidden -ArgumentList "--port=5555 --broker=redis://localhost:6379/0 --broker_api=redis://localhost:6379/0"
