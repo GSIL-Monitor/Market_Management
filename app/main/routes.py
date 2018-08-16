@@ -2,7 +2,6 @@
 
 from flask import session, redirect, url_for, render_template, request, make_response, current_app, send_from_directory
 from . import main
-from .forms import LoginForm
 from libs.json import JSON
 import os
 
@@ -11,7 +10,7 @@ def index():
     markets = JSON.deserialize('.', 'storage', 'markets.json')
     if markets is None:
         markets = {}
-    response = make_response(render_template('index.html', markets = markets))
+    response = make_response(render_template('index.html', markets=markets))
     return response
 
 @main.route('/markets/<name>')

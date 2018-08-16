@@ -143,10 +143,10 @@ Tab_keywords.prototype.loadResults = function(results){
             let href = item['href']
 
             let title_cls = ''
-            if(title.toLowerCase() in used_titles){
+            if(used_titles && title.toLowerCase() in used_titles){
                 title_cls = 'used'
             }
-            if(title.toLowerCase() in reserved_titles){
+            if(reserved_titles && title.toLowerCase() in reserved_titles){
                 title_cls = 'reserved'
             }
 

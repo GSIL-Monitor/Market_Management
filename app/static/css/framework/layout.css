@@ -65,7 +65,7 @@
 }
 #left .market .card-body .categories button i{
     position: absolute;
-    left:1px;
+    right:0px;
     cursor: pointer;
 }
 

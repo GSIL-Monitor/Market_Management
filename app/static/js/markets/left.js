@@ -108,14 +108,15 @@ function init(data){
 
     })
 
-    $root.on('click', '.list-group-item', function(){
+    $root.on('click', '.list-group-item', function(e){
+        e.stopPropagation()
         $root.find('.list-group-item.selected').removeClass('selected')
         $(this).addClass('selected')
 
         let categories = current_category()
         let market = current_market()
 
-        let $main_content = $('#main .main_content').empty()
+        let $main_content = $('#main>.main_content').empty()
         let tabs = new Tabs()
         tabs.init($main_content)
         tabs.append_tab(new Tab_attributes(socket, market, categories))
@@ -124,6 +125,13 @@ function init(data){
         if($(this).find('i').length == 0){
             tabs.append_tab(new Tab_products(socket, market, categories))
         }
+
+        let m = {'name':market.name, 'directory':market.directory}
+        socket.emit('deserialize', m, [], 'product_list.json', function(product_list){
+            if(product_list.length == 1){
+                $root.find('.card.market').data('product_list', product_list[0])
+            }
+        })
     })
 
     $root.on('click', 'button i', function(e){
@@ -170,12 +178,12 @@ function load_categories($card){
             if(item in sub_categories){
                 let sub_entries = ''
                 for(let sub_item of sub_categories[item]){
-                    sub_entries= `${sub_entries}<button type="button" class="list-group-item list-group-item-action">${sub_item}</button>`
+                    sub_entries= `${sub_entries}<button type="button" class="list-group-item list-group-item-action"><span>${sub_item}</span></button>`
                 }
-                entries= `${entries}<button type="button" class="list-group-item list-group-item-action"><i class="ion-plus"></i>${item}</button>`
+                entries= `${entries}<button type="button" class="list-group-item list-group-item-action"><i class="material-icons">add</i><span>${item}</span></button>`
                 entries = `${entries}<div class="list-group sub_categories" style="display:none;">${sub_entries}</div>`
             }else{
-                entries= `${entries}<button type="button" class="list-group-item list-group-item-action">${item}</button>`
+                entries= `${entries}<button type="button" class="list-group-item list-group-item-action"><span>${item}</span></button>`
             }
         }
 
@@ -202,11 +210,10 @@ function current_category(){
     if($btn.length == 0){
         return category
     }
-    category.push($btn.text().trim())
+    category.push($btn.find('span').text().trim())
     if ($btn.parent().hasClass('sub_categories')){
-        category.unshift($btn.parent().prev().text().trim())
+        category.unshift($btn.parent().prev().find('span').text().trim())
     }
-
     return category
 }
 

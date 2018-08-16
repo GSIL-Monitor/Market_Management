@@ -34,6 +34,7 @@ class KwclrAliSp(KewordsCrawler):
             label = self.browser.find_element_by_css_selector(self.cl_max_pn)
         except NoSuchElementException:
             pass
+
         self.max_pn = int(label.text.strip().split(' ')[2])
         
         items = self.browser.find_elements_by_css_selector(self.cl_item)
@@ -46,35 +47,10 @@ class KwclrAliSp(KewordsCrawler):
 
             result['isCrowned'] = False
             result['isAd'] = False
-            
-            # product_id = re.search('\/(\d+)-(\d+)\/', href).group(1)
-            # category_id = re.search('\/(\d+)-(\d+)\/', href).group(2)
 
             self.product_urls.append(href)
             self.products[href] = result
             results.append(result)
-            
-#             try:
-#                 item.find_element_by_css_selector(self.cl_crown)
-#                 result['isCrowned'] = True
-#             except NoSuchElementException:
-#                 result['isCrowned'] = False
-
-#             try:
-#                 item.find_element_by_css_selector(self.cl_ad)
-#                 result['isAd'] = True
-#             except NoSuchElementException:
-#                 result['isAd'] = False
-
-#             try:
-#                 tag = item.find_element_by_css_selector(self.cl_keywords)
-#             except NoSuchElementException:
-#                 tag = None
-
-#             if tag is not None:
-#                 tag = tag.get_attribute('innerHTML').replace('Tags:', '')
-#                 for word in tag.split('|')[0:-1]:
-#                     result['keywords'].append(word.strip())
 
         count = 1
         for url in self.product_urls:

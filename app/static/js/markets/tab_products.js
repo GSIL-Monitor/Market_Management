@@ -34,6 +34,7 @@ function Tab_products(socket, market, categories=undefined, directory=undefined,
     let that = this
     this.get_products()
         .then(function(data){
+            console.log(data)
             let attrs = data['attributes']
             for(let folder of data['folders']){
                 let isSeried = false
@@ -81,12 +82,13 @@ function Tab_products(socket, market, categories=undefined, directory=undefined,
                     }
                     let file = data['files'][folder][0]
                     let parts = file.split('_')
+                    let pid = parts[0]
                     let files = data['files'][folder]
                     that.products[parts[0]] = {'files': files, 'pid': parts[0], 'psid': parts[1], 'folder': folder}
                     that.products[parts[0]]['categories'] = that.categories
                     let key = folder+'_'+pid
                     if(key in attrs){
-                        that.series[folder][pid]['ali_id'] = attrs[key].alibaba_id
+                        that.products[pid]['ali_id'] = attrs[key].alibaba_id
                     }
                 }
             }
@@ -106,7 +108,7 @@ function Tab_products(socket, market, categories=undefined, directory=undefined,
                 }
             }else if(that.products){
                 that.$series.hide()
-                that.load_product_list(products)
+                that.load_product_list(that.products)
             }
 
         }).catch(error => console.log(error))
@@ -258,7 +260,20 @@ function Tab_products(socket, market, categories=undefined, directory=undefined,
                         counter--
                     }while(counter>0)
                 }
+
+                if (pictures.length == 0){
+                    for(let f of p.files){
+                        if(f.toLowerCase().endsWith('.jpg')){
+                            let path_root = that.market.directory + '\\' + p.categories.join('\\') + '\\' + p.folder
+                            pictures.push(path_root + '\\' + f)
+                        }
+                        if(pictures.length == 6){
+                            break
+                        }
+                    }
+                }
                 p['pictures'] = pictures
+
 
                 let template_pictures = []
                 for(let sel of template['selections']){
@@ -274,26 +289,56 @@ function Tab_products(socket, market, categories=undefined, directory=undefined,
 
             if(similar_product_selected){
                 if(!similar_product_id){
-                    for(let p of data){
-                        let folder = p.folder.split(' - ')
-                        let key = folder[0] + ' - ' + 'serie'
-                        let found = false
-                        if(key in that.series){
-                            if(p.pid in (that.series[key])){
-                                let ali_id = that.series[key][p.pid]['ali_id']
-                                if(ali_id){
-                                    p['similar_ali_id'] = ali_id
-                                    found = true
-                                }
+                    if(that.series){
+                        for(let p of data){
+                            let folder = p.folder.split(' - ')
+                            let key = folder[0] + ' - ' + 'serie'
+                            let found = false
+                            if(key in that.series){
+                                if(p.pid in (that.series[key])){
+                                    let ali_id = that.series[key][p.pid]['ali_id']
+                                    if(ali_id){
+                                        p['similar_ali_id'] = ali_id
+                                        found = true
+                                    }
 
+                                }
+                            }
+                            if(!found){
+                                let msg = {'type':'danger'}
+                                msg['content'] = '请先填入 相似产品的 阿里巴巴ID'
+                                fw.notify(msg)
+                                return
                             }
                         }
-                        if(!found){
-                            let msg = {'type':'danger'}
-                            msg['content'] = '请先填入 相似产品的 阿里巴巴ID'
-                            fw.notify(msg)
-                            return
+                    }else{  // find similar_ali_id from posted products
+                        let posted_product_list = $('#left .card.market').data('product_list')
+                        let posted_products = {}
+                        for(let pp of posted_product_list){
+                            let key = pp['pid'].replace(/[-_]/g, '').toUpperCase()
+                            if(key in posted_products){
+                                posted_products[key].push(pp)
+                            }else{
+                                posted_products[key]=[]
+                                posted_products[key].push(pp)
+                            }
                         }
+                        for(let p of data){
+                            let found = false
+                            let key = p.pid.toUpperCase()
+                            if(key in posted_products){
+                                let ali_id = posted_products[key][0]['ali_id']
+                                p['similar_ali_id'] = ali_id
+                                        found = true
+                            }
+                            if(!found){
+                                let msg = {'type':'danger'}
+                                msg['content'] = '已发布产品中 没有找到 相似产品的 阿里巴巴ID。' + p.pid
+                                fw.notify(msg)
+                                return
+                            }
+                        }
+
                     }
                 }
 
@@ -301,8 +346,11 @@ function Tab_products(socket, market, categories=undefined, directory=undefined,
                 that.socket.emit('post_similar_products', data, similar_product_id, function(){
                 })
                 that.socket.on('product_posting', function(product){
+                    console.log(product)
                     let new_posted_products = that.market['new_posted_products']
-                    new_posted_products[product.pid] = product
+
+                    let key = product.categories.join('_')+'_'+product.pid
+                    new_posted_products[key] = product
                     product['title'] = product['attributes']['name']
 
                     delete product['attributes_list']
@@ -391,10 +439,11 @@ Tab_products.prototype.load_product_list = function(products){
         let src = `/markets/${this.market['name']}/${paths.join('/')}/${folder}/${file_name}`
         let html = `<img class="card-img-top" src="${src}" alt="Card image cap">`
         html = `${html}<div class="card-footer"><small class="text-muted">${id}</small></div>`
-console.log(this.market)
+
+        let pkey = product.categories.join('_')+'_'+id
         if('ali_id' in product && product.ali_id){
             html = `<div class="card ${id} posted">${html}</div>`
-        }else if(id in this.market['new_posted_products']){
+        }else if(this.market['new_posted_products'] && pkey in this.market['new_posted_products']){
             html = `<div class="card ${id} new_posted">${html}</div>`
         }else{
             html = `<div class="card ${id}">${html}</div>`

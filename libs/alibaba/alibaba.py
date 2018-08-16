@@ -1,5 +1,6 @@
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -19,6 +20,7 @@ import traceback
 class Alibaba:
     api = 'https://i.alibaba.com'
     api_post_similar_product = 'https://hz-productposting.alibaba.com/product/post_product_interface.htm?from=manage&import_product_id='
+    api_post_similar_structured_product = 'https://post.alibaba.com/product/publish.htm?pubType=similarPost&itemId='
     api_product_manage = 'https://hz-productposting.alibaba.com/product/products_manage.htm'
     user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36'
 
@@ -40,9 +42,16 @@ class Alibaba:
     chrome_options_headless.add_argument('--disable-infobars')
     chrome_options_headless.add_argument('--ignore-certificate-errors')
 
-    def __init__(self, user, password, headless=False, proxy=None, browser=None):
+    def __init__(self, user, password, headless=False, proxy=None, browser=None, socketio_connection=None):
         self.user = user
         self.password = password
+
+        if socketio_connection:
+            self.socketio = socketio_connection[0]
+            self.namespace = socketio_connection[1]
+            self.room = socketio_connection[2]
+        else:
+            self.socketio = None
 
         if browser:
             self.browser = browser
@@ -57,8 +66,26 @@ class Alibaba:
             self.browser = webdriver.Chrome(chrome_options=self.chrome_options)
             self.browser.maximize_window()
 
+        self.structured = None
+
     def notify(self, typo, message):
-        print(typo, message)
+        if self.socketio:
+            if '_' in typo:
+                self.socketio.emit(typo, message, namespace=self.namespace, room=self.room)
+            else:
+                self.socketio.emit('notify', dict(type=typo, content=message), namespace=self.namespace, room=self.room)
+        else:
+            print(typo, message)
+
+    def is_structured(self):
+        if self.structured is not None:
+            return self.structured
+        else:
+            if self.browser.find_elements_by_css_selector('#struct-content'):
+                self.structured = True
+            else:
+                self.structured = False
+            return self.structured
 
     def login(self):
         try:
@@ -95,6 +122,8 @@ class Alibaba:
             input_login.send_keys(self.user)
             input_pwd.send_keys(self.password)
             input_submit.click()
+
+            self.structured = None
 
             WebDriverWait(self.browser, 15).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, 'header div[data-role="user"]')))
@@ -244,15 +273,22 @@ class Alibaba:
 
     def submit_product(self):
         # submit to next step
-        btn_submit_next = self.browser.find_element_by_css_selector('button#submitFormNext')
+        btn_submit_next = None
+        if self.is_structured() is True:
+            btn_submit_next = self.browser.find_element_by_css_selector('#struct-buttons button:nth-child(3)')
+        else:
+            btn_submit_next = self.browser.find_element_by_css_selector('button#submitFormNext')
+
         ActionChains(self.browser).move_to_element(btn_submit_next).perform()
         btn_submit_next.click()
 
         # 提交表格
         self.notify("primary", "提交产品")
-        btn_submit = WebDriverWait(self.browser, 15).until(
-            EC.element_to_be_clickable((By.CSS_SELECTOR, 'button#submitFormBtnA')))
-        btn_submit.click()
+
+        if self.is_structured() is not True:
+            btn_submit = WebDriverWait(self.browser, 15).until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, 'button#submitFormBtnA')))
+            btn_submit.click()
 
         WebDriverWait(self.browser, 30).until(EC.presence_of_element_located(
             (By.CSS_SELECTOR, '.next-step-item-last.next-step-item-process,.ui2-dialog-transition')))
@@ -360,6 +396,7 @@ class Alibaba:
         return result
 
     def post_similar_product(self, product, similar_ali_pid):
+
         browser = self.browser
         js_templ = "document.querySelector('{selector}').value = '{value}';"
         attrs = product['attributes']
@@ -373,6 +410,9 @@ class Alibaba:
             if len(browser.find_elements_by_css_selector(css_selector)) == 0:
                 self.notify("warning", "请先登录 阿里巴巴 国际站")
                 return
+
+            if self.is_structured():
+                return self.post_similar_structured_product(product, similar_ali_pid)
 
             WebDriverWait(browser, 15).until(EC.visibility_of_element_located((By.CSS_SELECTOR, '#editor-container')))
 
@@ -503,7 +543,7 @@ class Alibaba:
             btn_free_sample.click()
 
             # make product pictures to be protected
-            quantity = 6
+            quantity = len(product['pictures'])
             css_selector = "#iamge-info-block li.image-upload-list-item .action-wrapper"
             WebDriverWait(browser, 15).until(ElementQuantityEquals((By.CSS_SELECTOR, css_selector), quantity))
             css_selector = "#iamge-info-block li.image-upload-list-item .action-wrapper a"
@@ -517,7 +557,7 @@ class Alibaba:
                             element.click()  # exception: element is not clickable
                             break
                 except StaleElementReferenceException:
-                    time.sleep(0.5)
+                    time.sleep(1)
                     continue
                 if not found:
                     break
@@ -526,12 +566,89 @@ class Alibaba:
 
             return product
 
-        except TimeoutException:
+        except TimeoutException as e:
             self.notify("danger", "错误：" + str(TimeoutException))
-            return TimeoutException
-        except NoSuchElementException:
+            traceback.print_exc()
+            return e
+        except NoSuchElementException as e:
             self.notify("danger", "错误：" + str(NoSuchElementException))
-            return NoSuchElementException
+            traceback.print_exc()
+            return e
+
+    def post_similar_structured_product(self, product, similar_ali_pid):
+        browser = self.browser
+        attrs = product['attributes']
+
+        # self.notify("primary", "打开 发布相似产品 网址: " + self.api_post_similar_product + similar_ali_pid)
+        #
+        # browser.get(self.api_post_similar_structured_product + similar_ali_pid)
+
+        # css_selector = 'header div[data-role="user"] div[data-role="wel"] a span'
+        # if len(browser.find_elements_by_css_selector(css_selector)) == 0:
+        #     self.notify("warning", "请先登录 阿里巴巴 国际站")
+        #     return
+
+        WebDriverWait(browser, 15).until(EC.visibility_of_element_located((By.CSS_SELECTOR, '#struct-superText')))
+
+        self.notify("primary", "修改标题和关键字 ... ...")
+
+        input = browser.find_element_by_css_selector('#productTitle')
+        input.clear()
+        input.send_keys(attrs['name'])
+
+        input = browser.find_element_by_css_selector('#struct-productKeywords li:nth-child(1) input')
+        input.clear()
+        input.send_keys(attrs['keywords'][0])
+        input = browser.find_element_by_css_selector('#struct-productKeywords li:nth-child(2) input')
+        input.clear()
+        input.send_keys(attrs['keywords'][1])
+        input = browser.find_element_by_css_selector('#struct-productKeywords li:nth-child(3) input')
+        input.clear()
+        input.send_keys(attrs['keywords'][2])
+
+        # 上传 产品 图片
+        element = browser.find_element_by_css_selector("#struct-scImages .image-upload-list")
+        ActionChains(browser).move_to_element(element).perform()
+        css_selector = '#struct-scImages .image-upload-list-item-info'
+        has_selector = 'image-upload-list-item-done'
+        counter = 1
+
+        for file in product['pictures']:
+            self.notify("primary", "上传产品图片: 第 " + str(counter) + " 张, " + file.split('\\').pop())
+            input_file_list = browser.find_element_by_css_selector('#struct-scImages input[type="file"]')
+            input_file_list.send_keys(file)
+            WebDriverWait(browser, 15).until(ElementHasCssClass((By.CSS_SELECTOR, css_selector), has_selector))
+            counter += 1
+
+        # check free sample
+        self.notify("primary", "点选免费样品, 保护产品图片")
+        btn_free_sample = browser.find_element_by_css_selector('#struct-scSample span.radio-item:nth-child(3)')
+
+        ActionChains(browser).move_to_element(btn_free_sample).perform()
+        btn_free_sample.click()
+
+        # make product pictures to be protected
+        quantity = 1
+        css_selector = "#struct-scImages li.image-upload-list-item .action-wrapper"
+        WebDriverWait(browser, 15).until(ElementQuantityEquals((By.CSS_SELECTOR, css_selector), quantity))
+        css_selector = "#struct-scImages li.image-upload-list-item .action-wrapper button"
+        while True:
+            elements = browser.find_elements_by_css_selector(css_selector)
+            found = False
+            try:
+                for element in elements:
+                    if element.text == '添加守护':
+                        found = True
+                        element.click()  # exception: element is not clickable
+                        break
+            except StaleElementReferenceException:
+                time.sleep(1)
+                continue
+            if not found:
+                break
+
+        self.submit_product()
+        return product
 
     def get_posted_product_info(self, pn):
         browser = self.browser
@@ -539,15 +656,24 @@ class Alibaba:
         try:
             self.notify("primary", '打开 产品管理 页面 ... ...')
             browser.get(self.api_product_manage)
-            css_selector = '#ballon-container .list-item'
-            WebDriverWait(browser, 15).until(EC.presence_of_element_located((By.CSS_SELECTOR, css_selector)))
+            css_selector = '#ballon-container .list-item, #ballon-container .next-table-body tr'
+            masker = WebDriverWait(browser, 15).until(EC.presence_of_element_located((By.CSS_SELECTOR, css_selector)))
+
+            time.sleep(5)
+            webdriver.ActionChains(self.browser).send_keys(Keys.ESCAPE).perform()
+
+            css_selector = '#ballon-container .manage-loading .next-loading-tip'
+            div_tip = browser.find_elements_by_css_selector(css_selector)
+            if len(div_tip) != 0:
+                WebDriverWait(browser, 20).until(EC.staleness_of(div_tip[0]))
 
             msg = '切换 至 显示全部产品 ... ...'
             self.notify("primary", msg)
             css_selector = '#ballon-container div[role="tab"]:nth-child(1)'
+            css_selector += ', #ballon-container .posting-manage-filter-row:first-child span:nth-child(2)'
             tab_all = WebDriverWait(browser, 15).until(
                 EC.visibility_of_element_located((By.CSS_SELECTOR, css_selector)))
-            tab_all.click()
+            self.click(tab_all)
             browser.implicitly_wait(1)
             css_selector = '#ballon-container .manage-loading .next-loading-tip'
             div_tip = browser.find_elements_by_css_selector(css_selector)
@@ -559,39 +685,69 @@ class Alibaba:
                 msg = '查找 全部产品列表 第 ' + str(counter + 1) + ' 页'
                 self.notify("primary", msg)
 
-                css_selector = '#ballon-container .list-item'
                 html_source = browser.page_source
                 doc = pq(html_source)
                 items = doc('#ballon-container .list-item')
-                for item in items:
-                    pq_item = pq(item)
-                    product = {}
-                    pq_a = pq_item.find('.product-subject a')
-                    if len(pq_a) == 0:
-                        continue
+                if items:
+                    for item in items:
+                        pq_item = pq(item)
+                        product = {}
+                        pq_a = pq_item.find('.product-subject a')
+                        if len(pq_a) == 0:
+                            continue
 
-                    product['href'] = pq_a.attr('href')
-                    product['title'] = pq_a.text().strip().lower()
-                    product['pid'] = pq_item.find('.product-model').text().split(':')[1].strip()
-                    product['category'] = pq_item.find('.product-group').text().split(':')[1].strip()
-                    product['update'] = pq_item.find('.product-update span').text().strip()
-                    product['price'] = pq_item.find('.product-price div').text().strip()
-                    product['quality'] = []
-                    product['quality'].append(pq_item.find('.product-quality div:nth-child(1)').text().strip())
-                    product['quality'].append(pq_item.find('.product-quality div:nth-child(2)').text().strip())
-                    pq_tags = pq_item.find('.product-tags .next-tag-body')
-                    product['tags'] = []
+                        product['href'] = pq_a.attr('href')
+                        product['title'] = pq_a.text().strip().lower()
+                        product['pid'] = pq_item.find('.product-model').text().split(':')[1].strip()
+                        product['category'] = pq_item.find('.group-name').text().split(':')[1].strip()
+                        product['update'] = pq_item.find('.next-col:nth-child(5) span').text().strip()
+                        product['price'] = pq_item.find('.next-col:nth-child(3)').text().strip()
+                        product['quality'] = []
+                        product['quality'].append(pq_item.find('.product-quality').text().strip())
+                        pq_tags = pq_item.find('.product-tags .next-tag-body')
+                        product['tags'] = []
 
-                    for tag in pq_tags:
-                        product['tags'].append(pq(tag).text().strip())
+                        for tag in pq_tags:
+                            product['tags'].append(pq(tag).text().strip())
 
-                    result = re.search('id=(\d+)$', product['href'])
-                    if result:
-                        ali_id = result.group(1)
-                    else:
-                        ali_id = re.search('_(\d+).htm', product['href']).group(1)
-                    product['ali_id'] = ali_id
-                    products.append(product)
+                        result = re.search('id=(\d+)$', product['href'])
+                        if result:
+                            ali_id = result.group(1)
+                        else:
+                            ali_id = re.search('_(\d+).htm', product['href']).group(1)
+                        product['ali_id'] = ali_id
+                        products.append(product)
+                else:
+                    items = doc('#ballon-container .next-table-body tr')
+                    for item in items:
+                        pq_item = pq(item)
+                        product = {}
+                        pq_a = pq_item.find('.product-subject a')
+                        if len(pq_a) == 0:
+                            continue
+
+                        product['href'] = pq_a.attr('href')
+                        product['title'] = pq_a.text().strip().lower()
+                        product['pid'] = pq_item.find('.product-model').text().split(':')[1].strip()
+                        product['category'] = pq_item.find('.product-group').text().split(':')[1].strip()
+                        product['update'] = pq_item.find(
+                            '.next-table-cell:nth-child(5)>div>div:first-child').text().strip()
+                        product['price'] = pq_item.find('.next-table-cell:nth-child(3)').text().strip()
+                        product['quality'] = []
+                        product['quality'].append(pq_item.find('.product-quality').text().strip())
+                        pq_tags = pq_item.find('.product-tags .next-tag-body')
+                        product['tags'] = []
+
+                        for tag in pq_tags:
+                            product['tags'].append(pq(tag).text().strip())
+
+                        result = re.search('id=(\d+)$', product['href'])
+                        if result:
+                            ali_id = result.group(1)
+                        else:
+                            ali_id = re.search('_(\d+).htm', product['href']).group(1)
+                        product['ali_id'] = ali_id
+                        products.append(product)
 
                 if counter == pn - 1:
                     break
@@ -610,12 +766,25 @@ class Alibaba:
 
                 self.notify("primary", "完成 查找！")
         except Exception as e:
-            self.notify("danger", "爬取产品 [" + ali_id + "] 数据 出错, " + str(e))
-            products = None
+            self.notify("danger", "爬取产品 数据 出错, " + str(e))
+            traceback.print_exc()
+            products = []
         finally:
             if self.socketio:
                 self.notify("get_posted_product_info_result", products)
+            # return products
 
+    def click(self, btn):
+        while True:
+            try:
+                btn.click()
+                break
+            except WebDriverException as e:
+                if 'is not clickable at point' in str(e):
+                    self.browser.implicitly_wait(0.5)
+                    continue
+                else:
+                    raise e
 
 class ElementHasCssClass:
     def __init__(self, locator, css_class):

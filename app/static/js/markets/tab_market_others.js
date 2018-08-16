@@ -22,8 +22,10 @@ function Tab_market_others(socket, market, categories=undefined, directory=undef
 
     this.$content.find('.update_all_posted_products_info').click(function(){
 
-        that.socket.emit('get_posted_product_info', 1000)
+        that.socket.emit('get_posted_product_info', 10000)
         that.socket.once('get_posted_product_info_result', function(products){
+            that.products = products;
+            that.socket.emit('serialize', products, market, [], 'product_list.json');
             that.update_products_info(products)
         })
     })
@@ -71,7 +73,7 @@ Tab_market_others.prototype.update_products_info = function(products){
             used_titles[title] = product
         }
     }
-
+    console.log(posted_products)
     let market = {'name': this.market.name, 'directory': this.market.directory}
     this.socket.emit('serialize', posted_products, market, [], 'posted_products.json')
     this.socket.emit('serialize', new_posted_products, market, [], 'new_posted_products.json')

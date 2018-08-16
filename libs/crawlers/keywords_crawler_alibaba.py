@@ -70,7 +70,10 @@ class KwclrAlibaba(KewordsCrawler):
         for url in self.product_urls:
             msg = {'type':'primary'}
             msg['content'] = '正在抓取产品列表，第'+str(self.current_pn)+'页，第'+str(count)+'个产品详情页，网址：'+url
-            self.socket.emit('notify', msg, namespace='/markets', room=self.sid)
+            if self.socket:
+                self.socket.emit('notify', msg, namespace='/markets', room=self.sid)
+            else:
+                print('notify', msg)
 
             self.browser.get(url)
             # time.sleep(1)
@@ -93,7 +96,10 @@ class KwclrAlibaba(KewordsCrawler):
 
         msg = {'type':'primary'}
         msg['content'] = '正在抓取产品列表，第'+str(self.current_pn)+'页，网址：'+url
-        self.socket.emit('notify', msg, namespace='/markets', room=self.sid)
+        if self.socket:
+            self.socket.emit('notify', msg, namespace='/markets', room=self.sid)
+        else:
+            print('notify', msg)
 
         self.browser.get(url)
         

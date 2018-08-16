@@ -16,7 +16,7 @@ class KwclrAliSr(KewordsCrawler):
     cl_item = 'div.item-main'
     cl_title = 'div.item-info h2>a'
     cl_keywords = 'div.tags'
-    cl_img = 'div.img-wrap img'
+    cl_img = 'div.item-main>div.item-img img'
     cl_crown = 'div.item-info h2>i.ui2-icon-crown'
     cl_ad = 'div.item-info h2>div.seo-ad-flag>.sl'
 
@@ -80,7 +80,10 @@ class KwclrAliSr(KewordsCrawler):
 
         msg = {'type':'primary'}
         msg['content'] = '正在抓取产品列表，第'+str(self.current_pn)+'页，网址：'+url
-        self.socket.emit('notify', msg, namespace='/markets', room=self.sid)
+        if self.socket:
+            self.socket.emit('notify', msg, namespace='/markets', room=self.sid)
+        else:
+            print('notify', msg)
 
         self.browser.get(url)
         time.sleep(self.wait_seconds)

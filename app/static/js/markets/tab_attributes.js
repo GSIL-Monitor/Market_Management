@@ -181,9 +181,9 @@ function Tab_attributes(socket, market, categories=undefined, directory=undefine
 
             let title  = pAttributes.name.toLowerCase()
             product['title'] = title
-            let new_posted_products = that.market['new_posted_products']
-            new_posted_products[product.pid] = product
-            that.socket.emit('serialize', that.market['new_posted_products'], market, [], 'new_posted_products.json')
+            // let new_posted_products = that.market['new_posted_products']
+            // new_posted_products[product.pid] = product
+            // that.socket.emit('serialize', that.market['new_posted_products'], market, [], 'new_posted_products.json')
 
             let used_titles = that.market['used_titles']
             if(title in used_titles){
@@ -244,6 +244,10 @@ Tab_attributes.prototype.reserve_title = function(title){
 Tab_attributes.prototype.is_title_used = function(title){
 
     let used_titles = this.market['used_titles']
+    if(!used_titles){
+        used_titles = {}
+        this.market['used_titles'] = used_titles
+    }
     if(title in used_titles){
         let msg = {'type':'danger'}
         msg['content'] ='该标题已经被使用，'+ used_titles[title].category + ', ' + used_titles[title].pid + ', ' +  used_titles[title].ali_id
