@@ -131,11 +131,17 @@ class KwclrAlibaba(KewordsCrawler):
             title = re.sub('[()]', ' ', title)
             content = re.sub('[()]', ' ', content)
 
-            content = re.sub(title+',', '', content, flags=re.IGNORECASE)
+            try:
+                content = re.sub(title+',', '', content, flags=re.IGNORECASE)
+            except Exception as e:
+                pass
+
             content = re.sub(r'\.,', '-', content)
             for word in content.split(','):
                 word = re.sub('-', '.,', word).strip()
                 tags.append(word)
+                if len(tags) > 3:
+                    tags.pop(0)
 
 class images_loaded(object):
     def __init__(self, element):

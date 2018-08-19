@@ -347,7 +347,7 @@ def login_alibaba(lid, lpwd):
 def post_similar_products(products, similar_product_id):
     alibaba = current_app.data.alibaba
     alibaba.room = request.sid
-    socketio.start_background_task(backgound_post_similar_products, alibaba, products, similar_product_id, )
+    socketio.start_background_task(backgound_post_similar_products, alibaba, products, similar_product_id)
 
 
 def backgound_post_similar_products(alibaba, products, similar_product_id):
@@ -369,8 +369,10 @@ def backgound_post_similar_products(alibaba, products, similar_product_id):
             print(result)
 
         else:
+            print('===============================================================')
+            print(alibaba.namespace, alibaba.room)
             print(result)
-            socketio.emit('product_posting', result, namespace=alibaba.namespace, room=alibaba.room)
+            socketio.emit('product_posting', result, namespace=alibaba.namespace, broadcast=True, include_self=True)
         counter += 1
 
         socketio.emit('product_posting_finished', namespace=alibaba.namespace, room=alibaba.room)

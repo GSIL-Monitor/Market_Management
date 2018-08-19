@@ -22,8 +22,8 @@ class Alibaba:
     api_post_similar_product = 'https://hz-productposting.alibaba.com/product/post_product_interface.htm?from=manage&import_product_id='
     api_post_similar_structured_product = 'https://post.alibaba.com/product/publish.htm?pubType=similarPost&itemId='
     api_product_manage = 'https://hz-productposting.alibaba.com/product/products_manage.htm'
-    user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36'
-
+    # user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36'
+    user_agent = 'Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.117 Safari/537.36'
     chrome_options = webdriver.ChromeOptions()
     chrome_options.add_argument('--disable-gpu')
     chrome_options.add_argument('--disable-software-rasterizer')
@@ -64,7 +64,8 @@ class Alibaba:
             if proxy:
                 self.chrome_options.add_argument('--proxy-server='+proxy)
             self.browser = webdriver.Chrome(chrome_options=self.chrome_options)
-            self.browser.maximize_window()
+            # self.browser.maximize_window()
+            self.browser.set_window_size(1920, 1080)
 
         self.structured = None
 
@@ -135,6 +136,7 @@ class Alibaba:
         except (TimeoutException, WebDriverException, ConnectionAbortedError, AttributeError) as e:
             self.notify("danger", "登录 阿里巴巴 国际站 失败! " + str(e))
             traceback.print_exc()
+        pass
 
     def crawl_product_data(self, result_message, ali_id):
         api = 'https://hz-productposting.alibaba.com/product/editing.htm?id='
@@ -579,31 +581,22 @@ class Alibaba:
         browser = self.browser
         attrs = product['attributes']
 
-        # self.notify("primary", "打开 发布相似产品 网址: " + self.api_post_similar_product + similar_ali_pid)
-        #
-        # browser.get(self.api_post_similar_structured_product + similar_ali_pid)
-
-        # css_selector = 'header div[data-role="user"] div[data-role="wel"] a span'
-        # if len(browser.find_elements_by_css_selector(css_selector)) == 0:
-        #     self.notify("warning", "请先登录 阿里巴巴 国际站")
-        #     return
-
         WebDriverWait(browser, 15).until(EC.visibility_of_element_located((By.CSS_SELECTOR, '#struct-superText')))
 
         self.notify("primary", "修改标题和关键字 ... ...")
 
         input = browser.find_element_by_css_selector('#productTitle')
-        input.clear()
+        input.send_keys(Keys.CONTROL, 'a')
         input.send_keys(attrs['name'])
 
         input = browser.find_element_by_css_selector('#struct-productKeywords li:nth-child(1) input')
-        input.clear()
+        input.send_keys(Keys.CONTROL, 'a')
         input.send_keys(attrs['keywords'][0])
         input = browser.find_element_by_css_selector('#struct-productKeywords li:nth-child(2) input')
-        input.clear()
+        input.send_keys(Keys.CONTROL, 'a')
         input.send_keys(attrs['keywords'][1])
         input = browser.find_element_by_css_selector('#struct-productKeywords li:nth-child(3) input')
-        input.clear()
+        input.send_keys(Keys.CONTROL, 'a')
         input.send_keys(attrs['keywords'][2])
 
         # 上传 产品 图片
@@ -628,6 +621,8 @@ class Alibaba:
         btn_free_sample.click()
 
         # make product pictures to be protected
+        element = browser.find_element_by_css_selector("#struct-scImages .image-upload-list")
+        ActionChains(browser).move_to_element(element).perform()
         quantity = 1
         css_selector = "#struct-scImages li.image-upload-list-item .action-wrapper"
         WebDriverWait(browser, 15).until(ElementQuantityEquals((By.CSS_SELECTOR, css_selector), quantity))
@@ -639,7 +634,7 @@ class Alibaba:
                 for element in elements:
                     if element.text == '添加守护':
                         found = True
-                        element.click()  # exception: element is not clickable
+                        self.click(element)  # exception: element is not clickable
                         break
             except StaleElementReferenceException:
                 time.sleep(1)
