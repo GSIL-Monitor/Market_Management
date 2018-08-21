@@ -1,5 +1,5 @@
-﻿E:
-cd /workspace/python/"Market Management"
+﻿D:
+cd D:/workspace/"Market Management"
 .\venv\Scripts\activate.ps1
 
 $env:FLASK_APP=./runme.py

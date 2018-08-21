@@ -7,6 +7,7 @@ class KewordsCrawler:
     max_pn = 50
     current_pn = 0
     wait_seconds = 1
+    has_next_page = True
 
     api = None
     we_next_page = None
@@ -25,10 +26,10 @@ class KewordsCrawler:
         self.keyword = keyword
         self.page_quantity = int(page_quantity)
 
+    @property
     def start(self):
         results = []
         for i in range(self.page_quantity):
-            self.next_page()
             result = self.crawl()
             results.append(result)
 

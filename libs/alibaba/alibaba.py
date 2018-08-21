@@ -589,12 +589,17 @@ class Alibaba:
         input.send_keys(Keys.CONTROL, 'a')
         input.send_keys(attrs['name'])
 
+        time.sleep(0.5)
         input = browser.find_element_by_css_selector('#struct-productKeywords li:nth-child(1) input')
         input.send_keys(Keys.CONTROL, 'a')
         input.send_keys(attrs['keywords'][0])
+
+        time.sleep(0.5)
         input = browser.find_element_by_css_selector('#struct-productKeywords li:nth-child(2) input')
         input.send_keys(Keys.CONTROL, 'a')
         input.send_keys(attrs['keywords'][1])
+
+        time.sleep(0.5)
         input = browser.find_element_by_css_selector('#struct-productKeywords li:nth-child(3) input')
         input.send_keys(Keys.CONTROL, 'a')
         input.send_keys(attrs['keywords'][2])

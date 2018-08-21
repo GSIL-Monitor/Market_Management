@@ -106,7 +106,7 @@ class Inquiry:
                     self.alibaba.login()
                     self.browser.get(self.api)
 
-                div = WebDriverWait(self.browser, 15).until(
+                div = WebDriverWait(self.browser, 10).until(
                     EC.presence_of_element_located((By.CSS_SELECTOR, 'div.aui-loading')))
                 WebDriverWait(self.browser, 15).until(EC.staleness_of(div))
 
@@ -120,6 +120,8 @@ class Inquiry:
                         continue
                     else:
                         break
+                break
+            except TimeoutException as e:
                 break
             except WebDriverException as e:
                 if 'chrome not reachable' in str(e):
@@ -262,7 +264,8 @@ class Inquiry:
         #     return True
         # else:
         #     return False
-
+        print('==------------------------------------------------------==')
+        print(self.lname.lower(), enquiry['responsible_person'].lower())
         if enquiry['responsible_person'].lower() != self.lname.lower():
             return False
 

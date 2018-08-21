@@ -121,15 +121,15 @@ def get_inquiry(node):
     market = JSON.deserialize('.', 'storage', 'markets.json')[market_name]
 
     if lname is None or lname == market['lname']:
-        inquiry = Inquiry(market, headless=False, browser=app_data['browser'])
+        app_data['inquiry'] = Inquiry(market, headless=False, browser=app_data['browser'])
+        app_data['browser'] = app_data['inquiry'].browser
     else:
         for account in market['accounts']:
-            if lname == account['lname']:
-                inquiry = inquiry(market, account, headless=False, browser=app_data['browser'])
-
-    app_data['inquiry'] = inquiry
-    app_data['browser'] = inquiry.browser
-    return inquiry
+            print(lname, account)
+            if lname in account['lname']:
+                app_data['inquiry'] = Inquiry(market, account, headless=False, browser=app_data['browser'])
+                app_data['browser'] = app_data['inquiry'].browser
+    return app_data['inquiry']
 
 def get_p4p(node):
 
@@ -145,17 +145,17 @@ def get_p4p(node):
         lid = market['lid']
         lpwd = market['lpwd']
         lname = market['lname']
-        p4p = P4P(market, lid, lpwd, broker_url=app.conf.broker_url, browser=app_data['browser'], headless=False)
+        app_data['p4p'] = P4P(market, lid, lpwd, broker_url=app.conf.broker_url, browser=app_data['browser'], headless=False)
+        app_data['browser'] = app_data['p4p']
     else:
         for account in market['accounts']:
-            if lname == account['lname']:
+            if lname in account['lname']:
                 lid = account['lid']
                 lpwd = account['lpwd']
-                p4p = P4P(market, lid, lpwd, broker_url=app.conf.broker_url, browser=app_data['browser'], headless=False)
+                app_data['p4p'] = P4P(market, lid, lpwd, broker_url=app.conf.broker_url, browser=app_data['browser'], headless=False)
+                app_data['browser'] = app_data['p4p']
 
-    app_data['p4p'] = p4p
-    app_data['browser'] = p4p.browser
-    return p4p
+    return app_data['p4p']
 
 def get_market():
 

@@ -9,5 +9,8 @@ start-process celery -WindowStyle Hidden -ArgumentList "worker -A libs.CeleryTas
 start-process celery -WindowStyle Hidden -ArgumentList "worker -A libs.CeleryTasks.tasks -c 1 -l info -Q Tools_webww,celery -n Tools[webww]@localhost"
 start-process celery -WindowStyle Hidden -ArgumentList "worker -A libs.CeleryTasks.tasks -c 1 -l info -Q Eyelashes_webww,celery -n Eyelashes[webww]@localhost"
 
+start-process celery -WindowStyle Hidden -ArgumentList "worker -A libs.CeleryTasks.tasks -c 1 -l info -Q Eyelashes_inquiry_Emily,celery -n Eyelashes[inquiry]:Emily@localhost"
+start-process celery -WindowStyle Hidden -ArgumentList "worker -A libs.CeleryTasks.tasks -c 1 -l info -Q Eyelashes_webww_Emily,celery -n Eyelashes[webww]:Emily@localhost"
+
 start-process celery -WindowStyle Hidden -ArgumentList "beat -A libs.CeleryTasks.schedule -l info --pidfile="
 start-process flower -WindowStyle Hidden -ArgumentList "--port=5555 --broker=redis://localhost:6379/0 --broker_api=redis://localhost:6379/0"

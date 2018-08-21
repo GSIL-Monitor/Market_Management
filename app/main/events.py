@@ -509,7 +509,7 @@ def backgound_crawling_keywords(keyword, website, page_quantity, sid, socketio, 
     msg = {'type': 'primary', 'content': "开始爬取 ... ..."}
     socketio.emit('notify', msg, namespace='/markets', room=sid)
 
-    result = crawler.start()
+    result = crawler.start
 
     msg = {'type': "primary", 'content': "爬取结束，关闭浏览器 ... ..."}
     socketio.emit('notify', msg, namespace='/markets', room=sid)

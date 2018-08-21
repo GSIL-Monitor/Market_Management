@@ -35,7 +35,7 @@ class KwclrAliSp(KewordsCrawler):
         except NoSuchElementException:
             pass
 
-        self.max_pn = int(label.text.strip().split(' ')[2])
+        # self.max_pn = int(label.text.strip().split(' ')[2])
         
         items = self.browser.find_elements_by_css_selector(self.cl_item)
         for item in items:
@@ -56,7 +56,8 @@ class KwclrAliSp(KewordsCrawler):
         for url in self.product_urls:
             msg = {'type':'primary'}
             msg['content'] = '正在抓取产品列表，第'+str(self.current_pn)+'页，第'+str(count)+'个产品详情页，网址：'+url
-            self.socket.emit('notify', msg, namespace='/markets', room=self.sid)
+            if self.socket:
+                self.socket.emit('notify', msg, namespace='/markets', room=self.sid)
 
             self.browser.get(url)
             # time.sleep(1)
@@ -85,7 +86,8 @@ class KwclrAliSp(KewordsCrawler):
 
         msg = {'type':'primary'}
         msg['content'] = '正在抓取产品列表，第'+str(self.current_pn)+'页，网址：'+url
-        self.socket.emit('notify', msg, namespace='/markets', room=self.sid)
+        if self.socket:
+            self.socket.emit('notify', msg, namespace='/markets', room=self.sid)
 
         self.browser.get(url)
         sl_last_product_img = '#products-container ul:last-child li.last-product .product-img img'

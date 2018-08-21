@@ -66,7 +66,7 @@ if __name__ == "__main__":
     event_handler = MyHandler(patterns = ["*.py"])
     observer = Observer()
     observer.schedule(event_handler, code_dir_to_monitor, recursive=True)
-    observer.start()
+    observer.start
     print("file change observer started")
 
     try:
