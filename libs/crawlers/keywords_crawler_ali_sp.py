@@ -29,14 +29,14 @@ class KwclrAliSp(KewordsCrawler):
 
     def crawl(self):
         results = []
-        
+
         try:
             label = self.browser.find_element_by_css_selector(self.cl_max_pn)
         except NoSuchElementException:
             pass
 
         # self.max_pn = int(label.text.strip().split(' ')[2])
-        
+
         items = self.browser.find_elements_by_css_selector(self.cl_item)
         for item in items:
             result = {'title': "", 'keywords': [], 'img': ""}
@@ -54,8 +54,8 @@ class KwclrAliSp(KewordsCrawler):
 
         count = 1
         for url in self.product_urls:
-            msg = {'type':'primary'}
-            msg['content'] = '正在抓取产品列表，第'+str(self.current_pn)+'页，第'+str(count)+'个产品详情页，网址：'+url
+            msg = {'type': 'primary'}
+            msg['content'] = '正在抓取产品列表，第' + str(self.current_pn) + '页，第' + str(count) + '个产品详情页，网址：' + url
             if self.socket:
                 self.socket.emit('notify', msg, namespace='/markets', room=self.sid)
 
@@ -64,12 +64,16 @@ class KwclrAliSp(KewordsCrawler):
             self.crawl_product_page(url)
             count = count + 1
 
+            # for test purpose
+            # if count > 2:
+            #     break
         del self.product_urls[:]
         self.products = {}
 
         return results
 
     def next_page(self):
+        # print(self.current_pn)
 
         self.current_pn = self.current_pn + 1
         if self.api is None:
@@ -90,6 +94,7 @@ class KwclrAliSp(KewordsCrawler):
             self.socket.emit('notify', msg, namespace='/markets', room=self.sid)
 
         self.browser.get(url)
+
         sl_last_product_img = '#products-container ul:last-child li.last-product .product-img img'
         sl_uls = '#products-container ul'
         # actions = ActionChains(self.browser)
@@ -97,6 +102,11 @@ class KwclrAliSp(KewordsCrawler):
             # actions.move_to_element(ul).perform()
             self.browser.execute_script("arguments[0].scrollIntoView();", ul)
 
+        next_btn = self.browser.find_element_by_css_selector('#site_content div.ui-pagination-body .ui-pagination-next')
+        if 'ui-pagination-disabled' in next_btn.get_attribute('class'):
+            self.has_next_page = False
+        else:
+            self.has_next_page = True
         # last_product_img = self.browser.find_element(*(By.CSS_SELECTOR, sl_last_product_img))
         # wait = WebDriverWait(self.browser, 30)
         # wait.until(images_loaded(last_product_img))

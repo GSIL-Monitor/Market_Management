@@ -1,20 +1,19 @@
 import eventlet
 eventlet.monkey_patch()
+from utils.eventlet_patcher import eventlet_patcher
 
-import os
 from flask import Flask
 from flask_socketio import SocketIO
 from libs.json import JSON
-from utils.eventlet_patcher import eventlet_patcher
 
 from types import SimpleNamespace
 from selenium import webdriver
 
 import threading
+import os
 
 eventlet_patcher()
 socketio = SocketIO()
-
 
 def create_app(debug=True):
     """Create an application."""
@@ -25,11 +24,8 @@ def create_app(debug=True):
     from .main import main as main_blueprint
     app.register_blueprint(main_blueprint)
 
-    socketio.init_app(app)
-
     if app.debug and os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
         return app
-
 
     data = SimpleNamespace()
 
@@ -41,7 +37,6 @@ def create_app(debug=True):
     if not markets:
         markets = {}
     data.markets = markets
-
 
     chrome_options_headless = webdriver.ChromeOptions()
     # chrome_options_headless.add_argument('--headless')

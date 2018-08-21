@@ -109,6 +109,12 @@ class KwclrAlibaba(KewordsCrawler):
             # actions.move_to_element(item).perform()
             self.browser.execute_script("arguments[0].scrollIntoView();", item)
             time.sleep(0.05)
+
+        next_btn = self.browser.find_element_by_css_selector('.ui2-pagination .next')
+        if 'disable' in next_btn.get_attribute('class'):
+            self.has_next_page = False
+        else:
+            self.has_next_page = True
         # sl_last_product_img = '#products-container ul:last-child li.last-product .product-img img'
         # last_product_img = self.browser.find_element(*(By.CSS_SELECTOR, sl_last_product_img))
         # wait = WebDriverWait(self.browser, 30)

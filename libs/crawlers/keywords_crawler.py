@@ -20,16 +20,20 @@ class KewordsCrawler:
         self.page_quantity = int(page_quantity)
         self.sid = sid
         self.socket = socket
+        self.has_next_page = True
 
     def reset(self, keyword, page_quantity=1):
         self.current_pn = 0
         self.keyword = keyword
         self.page_quantity = int(page_quantity)
+        self.has_next_page = True
 
-    @property
     def start(self):
         results = []
         for i in range(self.page_quantity):
+            if not self.has_next_page:
+                break
+            self.next_page()
             result = self.crawl()
             results.append(result)
 

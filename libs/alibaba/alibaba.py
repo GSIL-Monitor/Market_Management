@@ -22,10 +22,11 @@ class Alibaba:
     api_post_similar_product = 'https://hz-productposting.alibaba.com/product/post_product_interface.htm?from=manage&import_product_id='
     api_post_similar_structured_product = 'https://post.alibaba.com/product/publish.htm?pubType=similarPost&itemId='
     api_product_manage = 'https://hz-productposting.alibaba.com/product/products_manage.htm'
-    # user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36'
-    user_agent = 'Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.117 Safari/537.36'
+    user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36'
+    # user_agent = 'Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.117 Safari/537.36'
     chrome_options = webdriver.ChromeOptions()
     chrome_options.add_argument('--disable-gpu')
+    chrome_options.add_argument('--user-agent="'+user_agent+'"')
     chrome_options.add_argument('--disable-software-rasterizer')
     chrome_options.add_argument('--disable-extensions')
     chrome_options.add_argument('--disable-logging')
@@ -65,7 +66,7 @@ class Alibaba:
                 self.chrome_options.add_argument('--proxy-server='+proxy)
             self.browser = webdriver.Chrome(chrome_options=self.chrome_options)
             # self.browser.maximize_window()
-            self.browser.set_window_size(1920, 1080)
+            # self.browser.set_window_size(1920, 1080)
 
         self.structured = None
 
