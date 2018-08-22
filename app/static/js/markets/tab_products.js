@@ -290,6 +290,18 @@ function Tab_products(socket, market, categories=undefined, directory=undefined,
             if(similar_product_selected){
                 if(!similar_product_id){
                     if(that.series){
+                        let posted_product_list = $('#left .card.market').data('product_list')
+                        let posted_products = {}
+                        for(let pp of posted_product_list){
+                            let key = pp['pid'].replace(/[-_]/g, '').toUpperCase()
+                            if(key in posted_products){
+                                posted_products[key].push(pp)
+                            }else{
+                                posted_products[key]=[]
+                                posted_products[key].push(pp)
+                            }
+                        }
+                        console.log(posted_products)
                         for(let p of data){
                             let folder = p.folder.split(' - ')
                             let key = folder[0] + ' - ' + 'serie'
@@ -301,10 +313,17 @@ function Tab_products(socket, market, categories=undefined, directory=undefined,
                                         p['similar_ali_id'] = ali_id
                                         found = true
                                     }
-
                                 }
                             }
+
+                            console.log(p, posted_products[p.pid])
+                            if(!found && p.pid in posted_products){
+                                let ali_id = posted_products[p.pid][0]['ali_id']
+                                p['similar_ali_id'] = ali_id
+                                found = true
+                            }
                             if(!found){
+
                                 let msg = {'type':'danger'}
                                 msg['content'] = '请先填入 相似产品的 阿里巴巴ID'
                                 fw.notify(msg)

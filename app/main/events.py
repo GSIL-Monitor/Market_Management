@@ -8,7 +8,6 @@ from .. import socketio
 
 from datetime import datetime
 from libs.json import JSON
-from libs.task import Task
 import os
 import tkinter
 from tkinter import filedialog

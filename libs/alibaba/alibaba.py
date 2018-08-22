@@ -433,6 +433,11 @@ class Alibaba:
                                  value=html.escape(attrs['type']))
             browser.execute_script(js)
 
+            # custom attrs
+            input_text=browser.find_element_by_css_selector('table.user-attr-table tr:nth-child(9) span:nth-child(2) input').get_attribute('value')
+            if 'alibaba' in input_text.lower():
+                browser.find_element_by_css_selector('table.user-attr-table tr:nth-child(9) i:last-child').click()
+
             # 上传 产品 图片
             element = browser.find_element_by_css_selector("#iamge-info-block .image-upload-list")
             ActionChains(browser).move_to_element(element).perform()
