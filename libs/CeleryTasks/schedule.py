@@ -55,6 +55,17 @@ app.conf.beat_schedule = {
         'options': {'queue': 'Eyelashes_webww_Emily'}
     },
 
+    'Eyelashes_inquiry_Ada_check': {                                              # Ada
+        'task': 'tasks.inquiry_check',
+        'schedule': crontab(minute=minutes_0_60_5_4, hour='0-23'),
+        'options': {'queue': 'Eyelashes_inquiry_Ada'}
+    },
+    'Eyelashes_webww_Ada_check': {                                                # Ada
+        'task': 'tasks.webww_check',
+        'schedule': crontab(minute=minutes_0_60_5_0, hour='0-23'),
+        'options': {'queue': 'Eyelashes_webww_Ada'}
+    },
+
     'Tools_p4p_check_0': {
         'task': 'tasks.p4p_check',
         'schedule': crontab(minute=minutes_0_45_2_1, hour='14'),
