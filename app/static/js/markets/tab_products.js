@@ -306,15 +306,15 @@ function Tab_products(socket, market, categories=undefined, directory=undefined,
                             let folder = p.folder.split(' - ')
                             let key = folder[0] + ' - ' + 'serie'
                             let found = false
-                            if(key in that.series){
-                                if(p.pid in (that.series[key])){
-                                    let ali_id = that.series[key][p.pid]['ali_id']
-                                    if(ali_id){
-                                        p['similar_ali_id'] = ali_id
-                                        found = true
-                                    }
-                                }
-                            }
+                            // if(key in that.series){
+                            //     if(p.pid in (that.series[key])){
+                            //         let ali_id = that.series[key][p.pid]['ali_id']
+                            //         if(ali_id){
+                            //             p['similar_ali_id'] = ali_id
+                            //             found = true
+                            //         }
+                            //     }
+                            // }
 
                             console.log(p, posted_products[p.pid])
                             if(!found && p.pid in posted_products){

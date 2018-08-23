@@ -437,6 +437,9 @@ class Alibaba:
             input_text=browser.find_element_by_css_selector('table.user-attr-table tr:nth-child(9) span:nth-child(2) input').get_attribute('value')
             if 'alibaba' in input_text.lower():
                 browser.find_element_by_css_selector('table.user-attr-table tr:nth-child(9) i:last-child').click()
+            input_text=browser.find_element_by_css_selector('table.user-attr-table tr:nth-child(10) span:nth-child(2) input').get_attribute('value')
+            if 'alibaba' in input_text.lower():
+                browser.find_element_by_css_selector('table.user-attr-table tr:nth-child(10) i:last-child').click()
 
             # 上传 产品 图片
             element = browser.find_element_by_css_selector("#iamge-info-block .image-upload-list")

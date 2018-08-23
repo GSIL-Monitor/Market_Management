@@ -82,12 +82,9 @@ class Inquiry:
         print(typo, message)
 
     def login(self):
-        if self.browser is None:
-            self.alibaba = Alibaba(self.lid, self.lpwd, headless=self.headless, browser=self.browser)
-            self.alibaba.login()
-            self.browser = self.alibaba.browser
-        else:
-            self.alibaba.login()
+        self.alibaba = Alibaba(self.lid, self.lpwd, headless=self.headless, browser=self.browser)
+        self.alibaba.login()
+        self.browser = self.alibaba.browser
 
     def load_url(self):
         while True:
