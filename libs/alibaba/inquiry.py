@@ -366,7 +366,7 @@ class Inquiry:
             self.close_inquiry_and_switch_back()
 
     def send_message(self, message, attach=None):
-        chat_form = self.browser.find_element_by_css_selector('form.reply-wrapper')
+        chat_form = self.browser.find_element_by_css_selector('form.reply-wrapper div.holder')
         chat_form.click()
 
         uploading_failed = False
@@ -396,7 +396,7 @@ class Inquiry:
         WebDriverWait(self.browser, 15).until(
             EC.frame_to_be_available_and_switch_to_it((By.CSS_SELECTOR, '#inquiry-content_ifr')))
         body = self.browser.find_element_by_tag_name('body')
-        body.click()
+        self.click(body)
 
         js = self.reply_js_template.format(message=message)
         self.browser.execute_script(js)
@@ -404,9 +404,21 @@ class Inquiry:
 
         time.sleep(1)
 
-        btn_send = chat_form.find_element_by_css_selector('button.send')
+        btn_send = self.browser.find_element_by_css_selector('form.reply-wrapper button.send')
         btn_send.click()
         return True
+
+    def click(self, btn):
+        while True:
+            try:
+                btn.click()
+                break
+            except WebDriverException as e:
+                if 'is not clickable at point' in str(e):
+                    self.browser.implicitly_wait(0.5)
+                    continue
+                else:
+                    raise e
 
     def check(self):
         self.load_url()
