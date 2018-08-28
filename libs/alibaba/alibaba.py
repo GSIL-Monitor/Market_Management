@@ -65,7 +65,7 @@ class Alibaba:
             if proxy:
                 self.chrome_options.add_argument('--proxy-server='+proxy)
             self.browser = webdriver.Chrome(chrome_options=self.chrome_options)
-            # self.browser.maximize_window()
+            self.browser.maximize_window()
             # self.browser.set_window_size(1920, 1080)
 
         self.structured = None
