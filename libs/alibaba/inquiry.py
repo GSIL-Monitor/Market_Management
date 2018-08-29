@@ -54,11 +54,13 @@ class Inquiry:
         self.lid = account['lid'] if account else market['lid']
         self.lpwd = account['lpwd'] if account else market['lpwd']
         self.lname = account['lname'] if account else market['lname']
+        self.mobile = account['mobile'] if account else market['mobile']
 
         self.account = {}
         self.account['lid'] = self.lid
         self.account['lpwd'] = self.lpwd
         self.account['lname'] = self.lname
+        self.account['mobile'] = self.mobile
 
         self.alibaba = None
         self.browser = browser
@@ -315,7 +317,7 @@ class Inquiry:
                 if emails:
                     mime_message = Email.message_of_product_catalog(self.market, self.account, buyer['name'])
                     if Email.send(self.account, emails, mime_message):
-                        params = {'buyer': buyer['name'], 'greetings': greetings, 'email': ','.join(emails), 'sender': self.lname}
+                        params = {'buyer': buyer['name'], 'greetings': greetings, 'email': ','.join(emails), 'sender': self.lname, 'whatsapp': self.mobile}
                         message = self.reply_templates['notify_catalog_was_sent'].substitute(params)
                         if self.send_message(message, self.catalog):
                             tracking['status'].append('catalog was sent by email')
@@ -324,7 +326,7 @@ class Inquiry:
                             tracking['status'].append('catalog was sent by email, but reply was failed')
                             self.save_tracking_ids()
                 else:
-                    params = {'buyer': buyer['name'], 'greetings': greetings, 'sender': self.lname}
+                    params = {'buyer': buyer['name'], 'greetings': greetings, 'sender': self.lname, 'whatsapp': self.mobile}
                     message = self.reply_templates['notify_first_reply_without_email'].substitute(params)
                     if self.send_message(message, self.catalog):
                         tracking['status'].append('catalog was sent directly')
@@ -334,7 +336,7 @@ class Inquiry:
                     tracking['status'].append('catalog was sent by email')
                     self.save_tracking_ids()
                 else:
-                    params = {'buyer': buyer['name'], 'greetings': greetings, 'email': ','.join(emails), 'sender': self.lname}
+                    params = {'buyer': buyer['name'], 'greetings': greetings, 'email': ','.join(emails), 'sender': self.lname, 'whatsapp': self.mobile}
                     message = self.reply_templates['notify_catalog_was_sent'].substitute(params)
                     if self.send_message(message, self.catalog):
                         tracking['status'].append('catalog was sent by email')
@@ -354,7 +356,7 @@ class Inquiry:
                     mime_message = Email.message_of_product_catalog(self.market, self.account, buyer['name'])
                     if Email.send(self.account, emails, mime_message):
                         params = {'buyer': buyer['name'], 'greetings': '', 'email': ', '.join(emails),
-                                  'sender': self.lname}
+                                  'sender': self.lname, 'whatsapp': self.mobile}
                         message = self.reply_templates['notify_catalog_was_sent'].substitute(params)
                         if self.send_message(message, self.catalog):
                             tracking['status'].append('catalog was sent by email')

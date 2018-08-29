@@ -41,7 +41,7 @@ class Email:
         with open(file, 'r') as f:
             text = f.read()
         t = Template(text)
-        params = {'buyer': buyer, 'sender': account['lname'], 'catalog_href':catalog_href, 'homepage':market['homepage'], 'email':account['lid']}
+        params = {'buyer': buyer, 'sender': account['lname'], 'catalog_href':catalog_href, 'homepage': market['homepage'], 'email': account['lid'], 'whatsapp': account['mobile']}
         content = t.substitute(params)
         msg = MIMEText(content, 'html', 'utf-8')
         msg['Subject'] = 'Glitter Eyelash 2018 Product Catalog'

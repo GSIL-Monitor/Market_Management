@@ -10,29 +10,76 @@ minutes_0_60_5_2 = ','.join([str(x) for x in range(2, 60, 5)])
 minutes_0_60_5_3 = ','.join([str(x) for x in range(3, 60, 5)])
 minutes_0_60_5_4 = ','.join([str(x) for x in range(4, 60, 5)])
 
+minutes_0_45_2_0 = ','.join([str(x) for x in range(0, 45, 2)])
 minutes_0_45_2_1 = ','.join([str(x) for x in range(1, 45, 2)])
+
+minutes_30_60_2 = ','.join([str(x) for x in range(30, 60, 2)])
+minutes_20_60_2 = ','.join([str(x) for x in range(20, 60, 2)])
 
 app = Celery('scheduler')
 app.config_from_object('conf.celeryconfig')
 app.conf.beat_schedule = {
-    'Eyelashes_p4p_record': {
-        'task': 'tasks.p4p_record',
-        'schedule': crontab(minute=minutes_0_60_5_0, hour='0-23'),
-        'kwargs': {'group': '关注词'},
-        'options': {'queue': 'Eyelashes_p4p'}
-    },
-    'Eyelashes_p4p_check': {
+    # 'Eyelashes_p4p_record': {
+    #     'task': 'tasks.p4p_record',
+    #     'schedule': crontab(minute=minutes_0_60_5_0, hour='0-23'),
+    #     'kwargs': {'group': '关注词'},
+    #     'options': {'queue': 'Eyelashes_p4p'}
+    # },
+    'Eyelashes_p4p_check_0': {                                          # 直通车App
         'task': 'tasks.p4p_check',
-        'schedule': crontab(minute=minutes_0_60_2_0, hour='0-8'),
+        'schedule': crontab(minute=minutes_0_45_2_0, hour='14'),
         'kwargs': {'group': '直通车App'},
         'options': {'queue': 'Eyelashes_p4p'}
     },
-    'Eyelashes_p4p_turn_all_off': {
+    'Eyelashes_p4p_check_1': {                                          # 直通车App
+        'task': 'tasks.p4p_check',
+        'schedule': crontab(minute=minutes_0_60_2_0, hour='0-13,21-23'),
+        'kwargs': {'group': '直通车App'},
+        'options': {'queue': 'Eyelashes_p4p'}
+    },
+    'Eyelashes_p4p_turn_all_off_0': {                                   # 直通车App
         'task': 'tasks.p4p_turn_all_off',
-        'schedule': crontab(minute='2', hour='9'),
+        'schedule': crontab(minute='46', hour='14'),
         'kwargs': {'group': '直通车App'},
         'options': {'queue': 'Eyelashes_p4p'}
     },
+    'Eyelashes_p4p_check_2': {                                          # 直通车高消费词
+        'task': 'tasks.p4p_check',
+        'schedule': crontab(minute=minutes_0_60_2_1, hour='0-1,22'),
+        'kwargs': {'group': '直通车高消费词'},
+        'options': {'queue': 'Eyelashes_p4p'}
+    },
+    'Eyelashes_p4p_turn_all_off_1': {                                   # 直通车高消费词
+        'task': 'tasks.p4p_turn_all_off',
+        'schedule': crontab(minute='1', hour='2'),
+        'kwargs': {'group': '直通车高消费词'},
+        'options': {'queue': 'Eyelashes_p4p'}
+    },
+    'Eyelashes_p4p_check_3': {                                          # 直通车高消费词
+        'task': 'tasks.p4p_check',
+        'schedule': crontab(minute=minutes_20_60_2, hour='4'),
+        'kwargs': {'group': '直通车高消费词'},
+        'options': {'queue': 'Eyelashes_p4p'}
+    },
+    'Eyelashes_p4p_turn_all_off_2': {                                   # 直通车高消费词
+        'task': 'tasks.p4p_turn_all_off',
+        'schedule': crontab(minute='1', hour='5'),
+        'kwargs': {'group': '直通车高消费词'},
+        'options': {'queue': 'Eyelashes_p4p'}
+    },
+    'Eyelashes_p4p_check_4': {                                          # 直通车高消费词
+        'task': 'tasks.p4p_check',
+        'schedule': crontab(minute=minutes_30_60_2, hour='21'),
+        'kwargs': {'group': '直通车高消费词'},
+        'options': {'queue': 'Eyelashes_p4p'}
+    },
+    'Eyelashes_p4p_turn_all_off_3': {                                   # 直通车高消费词
+        'task': 'tasks.p4p_turn_all_off',
+        'schedule': crontab(minute='1', hour='23'),
+        'kwargs': {'group': '直通车高消费词'},
+        'options': {'queue': 'Eyelashes_p4p'}
+    },
+
     'Eyelashes_inquiry_check': {
         'task': 'tasks.inquiry_check',
         'schedule': crontab(minute=minutes_0_60_5_0, hour='0-23'),
@@ -54,7 +101,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=minutes_0_60_5_3, hour='0-23'),
         'options': {'queue': 'Eyelashes_webww_Emily'}
     },
-
     'Eyelashes_inquiry_Ada_check': {                                              # Ada
         'task': 'tasks.inquiry_check',
         'schedule': crontab(minute=minutes_0_60_5_4, hour='0-23'),
@@ -78,11 +124,11 @@ app.conf.beat_schedule = {
         'kwargs': {'group': '0直通车'},
         'options': {'queue': 'Tools_p4p'}
     },
-    'Tools_webww_check': {
-        'task': 'tasks.webww_check',
-        'schedule': crontab(minute=minutes_0_60_5_2, hour='0-23'),
-        'options': {'queue': 'Tools_webww'}
-    },
+    # 'Tools_webww_check': {
+    #     'task': 'tasks.webww_check',
+    #     'schedule': crontab(minute=minutes_0_60_5_2, hour='0-23'),
+    #     'options': {'queue': 'Tools_webww'}
+    # },
     'Tools_p4p_turn_all_off': {
         'task': 'tasks.p4p_turn_all_off',
         'schedule': crontab(minute='45', hour='14'),
@@ -91,7 +137,7 @@ app.conf.beat_schedule = {
     },
     'Reboot': {
         'task': 'tasks.reboot',
-        'schedule': crontab(minute='20', hour='17'),
+        'schedule': crontab(minute='10', hour='17'),
         'options': {'queue': 'celery'}
     },
     'OSOECO_checkin': {

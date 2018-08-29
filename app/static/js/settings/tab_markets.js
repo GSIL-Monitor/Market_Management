@@ -77,36 +77,46 @@ function Tab_Markets(socket, market=undefined, categories=undefined, directory=u
 
     this.$content.on('click', 'button.set_main_account', function(e){
         // e.stopPropagation()
-        let login_info = prompt("请输入 登录 主账号 的 登录ID、密码 和 名称", '登录ID、密码 和 名称 请用 英文逗号 分开')
-        
-        if(login_info.split(',').length != 3){
+        let login_info = prompt("请输入 登录 主账号 的 登录ID、密码、名称 和 手机号", '登录ID、密码、名称 和 手机号 请用 英文逗号 分开')
+
+        if(!login_info){
+            return
+        }
+
+        if(login_info.split(',').length != 4){
             let msg = {'type': 'danger', 'content': '输入格式错误'}
             fw.notify(msg)
             return
         }
         let market = $(this).parents('tr').data('market')
-        let [lid, lpwd, lname] = login_info.split(',')
+        let [lid, lpwd, lname, mobile] = login_info.split(',')
         market['lid'] = lid.trim()
         market['lpwd'] = lpwd.trim()
         market['lname'] = lname.trim()
+        market['mobile'] = mobile.trim()
 
         that.socket.emit('update_market', market)
     })
     
     this.$content.on('click', 'button.set_account', function(e){
         // e.stopPropagation()
-        let login_info = prompt("请输入 登录 子账号 的 登录ID、密码 和 名称", '登录ID、密码 和 名称 请用 英文逗号 分开')
-        
-        if(login_info.split(',').length != 3){
+        let login_info = prompt("请输入 登录 子账号 的 登录ID、密码、名称 和 手机号", '登录ID、密码、名称 和 手机号 请用 英文逗号 分开')
+
+        if(!login_info){
+            return
+        }
+
+        if(login_info.split(',').length != 4){
             let msg = {'type': 'danger', 'content': '输入格式错误'}
             fw.notify(msg)
             return
         }
 
-        let [lid, lpwd, lname] = login_info.split(',')
+        let [lid, lpwd, lname, mobile] = login_info.split(',')
         lid = lid.trim()
         lpwd = lpwd.trim()
         lname = lname.trim()
+        mobile = mobile.trim()
 
         let market = $(this).parents('tr').data('market')
         if(!( 'accounts' in market)){
@@ -118,6 +128,7 @@ function Tab_Markets(socket, market=undefined, categories=undefined, directory=u
             if(account.lid == lid){
                 account.lpwd = lpwd
                 account.lname = lname
+                account.mobile = mobile
                 found = true
                 break
             }
@@ -166,7 +177,7 @@ Tab_Markets.prototype.append_market = function(market){
 
 Tab_Markets.prototype.load_accounts = function(market){
 
-    let trs = this.account_to_tr({'lid':market.lid, 'lpwd':market.lpwd, 'lname':market.lname})
+    let trs = this.account_to_tr({'lid':market.lid, 'lpwd':market.lpwd, 'lname':market.lname, 'mobile':market.mobile})
 
     if('accounts' in market){
         for(let account of market.accounts){
@@ -179,6 +190,7 @@ Tab_Markets.prototype.load_accounts = function(market){
 Tab_Markets.prototype.account_to_tr = function(account){
     let tds = `<td>${account.lid}</td>`
     tds = `${tds}<td>${account.lname}</td>`
+    tds = `${tds}<td>${account.mobile}</td>`
     let buttons = `<button type="button" class="btn btn-primary remove_account"><i class="material-icons">delete</i></button>`
     buttons = `<div class="btn-group btn-group-sm", role="group">${buttons}</div>`
     tds = `${tds}<td>${buttons}</td>`
