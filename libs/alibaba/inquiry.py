@@ -612,7 +612,7 @@ class Inquiry:
         elif 'tool' in self.market['name'].lower():
             link = ''
 
-        params = {'salutation': salutation, 'link': link, 'sender': self.lname, 'email': self.lid}
+        params = {'salutation': salutation, 'link': link, 'sender': self.lname, 'email': self.lid, 'whatsapp': self.mobile}
 
         tid = thread['id']
         tracking = self.tracking_ids[tid]

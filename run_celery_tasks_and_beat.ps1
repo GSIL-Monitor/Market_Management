@@ -1,4 +1,4 @@
-﻿#Start-Sleep -Seconds 120
+﻿Start-Sleep -Seconds 120
 
 #D:
 #cd \workspace\"Market Management"
@@ -34,4 +34,4 @@ start-process celery -ArgumentList "worker -A libs.CeleryTasks.tasks -c 1 -l inf
 start-process celery -ArgumentList "worker -A libs.CeleryTasks.tasks -c 1 -l info -Q Eyelashes_webww_Ada,celery -n Eyelashes[webww]:Ada@localhost"
 
 start-process celery -ArgumentList "beat -A libs.CeleryTasks.schedule -l info --pidfile="
-start-process flower -WindowStyle Hidden -ArgumentList "--port=5555 --broker=redis://localhost:6379/0 --broker_api=redis://localhost:6379/0"
+start-process flower -ArgumentList "--port=5555 --broker=redis://localhost:6379/0 --broker_api=redis://localhost:6379/0"
