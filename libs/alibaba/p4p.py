@@ -55,6 +55,9 @@ class P4P():
         self.lpwd = lpwd
         self.broker_url = broker_url
 
+        if self.broker_url:
+            self.redis = redis.StrictRedis.from_url(self.broker_url)
+
         self.logger.info('initialize .... '+market['name'])
         self.market = market
         self.keywords_history = []
@@ -215,7 +218,15 @@ class P4P():
         finally:
             pass
 
-    def monitor(self, group='all'):
+    def monitor(self, group='all', sub_budget_limited=False):
+
+        if sub_budget_limited and self.redis.get(self.market['name'] + '_p4p_sub_budget') is not None:
+            if float(self.redis.get(self.market['name'] + '_p4p_sub_budget')) < 0:
+                if self.redis.get(self.market['name'] + '_p4p_sub_budget_overflow') is not None:
+                    self.turn_all_off(group=group)
+                    self.redis.delete(self.market['name'] + '_p4p_sub_budget_overflow')
+                return
+
         try:
             print('Task Monitor start to run with group="' + group + '"')
             keywords = []
@@ -299,6 +310,12 @@ class P4P():
 
             if keywords:
                 self.save_crawling_result(keywords)
+
+            if sub_budget_limited and self.redis.get(self.market['name'] + '_p4p_sub_budget') is not None:
+                if float(self.redis.get(self.market['name'] + '_p4p_sub_budget')) < 0:
+                    if self.redis.get(self.market['name']+'_p4p_sub_budget_overflow') is not None:
+                        self.turn_all_off(group=group)
+                        self.redis.delete(self.market['name'] + '_p4p_sub_budget_overflow')
 
         except Exception as e:
             print('Error: ', e)
@@ -532,8 +549,7 @@ class P4P():
             '.sc-manage-edit-price-dialog span[data-role="span-balance"]').text
 
         if self.broker_url:
-            r = redis.StrictRedis.from_url(self.broker_url)
-            self.balance = r.getset(self.market['name']+'_p4p_balance', balance)
+            self.balance = self.redis.getset(self.market['name']+'_p4p_balance', balance)
 
             if float(balance) == self.initial_balance or self.balance is None:
                 return
@@ -541,6 +557,12 @@ class P4P():
                 self.balance = self.balance.decode()
                 if self.balance != balance:
                     diff = format(float(self.balance) - float(balance), '.2f')
+
+                    changes = 0 - float(diff)
+                    sub_budget = self.redis.get(self.market['name'] + '_p4p_sub_budget')
+                    if sub_budget is not None and float(sub_budget) > 0:
+                        if self.redis.incrbyfloat(self.market['name'] + '_p4p_sub_budget', changes) < 0:
+                            self.redis.set(self.market['name'] + '_p4p_sub_budget_overflow', True)
 
                     time_str = arrow.now().format('YYYY-MM-DD HH:mm:ss')
                     date_str = time_str.split(' ')[0]
@@ -561,6 +583,12 @@ class P4P():
                 root = self.market['directory'] + '_config'
                 fn = 'p4p_balance_change_history_'+date_str+'.json.gz'
                 JSON.serialize([time_str, diff], root, [], fn, append=True)
+
+    def set_sub_budget(self, sub_budget):
+        self.redis.set(self.market['name'] + '_p4p_sub_budget', sub_budget)
+
+    def unset_sub_budget(self):
+        self.redis.delete(self.market['name'] + '_p4p_sub_budget')
 
     def next_page(self):
         success = True
@@ -690,23 +718,10 @@ class P4P():
                 else:
                     raise e
 
-    def turn_all_off(self, group='all', monitored=True, tid=None, socketio=None, tasks=None):
-        if tid:
-            tasks[tid]['is_running'] = True
-            msg = {'name': 'P4P.turn_all_off', 'tid': tid, 'group': group, 'monitored': monitored,
-                   'is_last_run': tasks[tid]['is_last_run']}
-            socketio.emit('event_task_start_running', msg, namespace='/markets', broadcast=True)
+    def turn_all_off(self, group='all'):
         try:
-            if tid:
-                tasks[tid]['progress'] = 1
-                socketio.emit('event_task_progress', {'tid': tid, 'progress': 1}, namespace='/markets', broadcast=True)
             with self.lock:
                 self.load_url()
-                if tid:
-                    tasks[tid]['progress'] = 2
-                    socketio.emit('event_task_progress', {'tid': tid, 'progress': 2}, namespace='/markets',
-                                  broadcast=True)
-                #             all_kws_count = int(self.browser.find_element_by_css_selector('a.all-kwcount span').text)
                 all_kws_count = self.switch_to_group(group)
                 kws_count = 0
                 while True:
@@ -718,10 +733,6 @@ class P4P():
                     selected = False
                     for tr in trs:
                         kws_count += 1
-                        if tid:
-                            tasks[tid]['progress'] = int(kws_count / all_kws_count * 97) + 3
-                            socketio.emit('event_task_progress', {'tid': tid, 'progress': tasks[tid]['progress']},
-                                          namespace='/markets', broadcast=True)
                         id = tr.find_element_by_css_selector('td:first-child input').get_attribute('value').strip()
                         # if monitored and id not in self.keywords_list['monitor']:
                         #     continue
@@ -746,18 +757,9 @@ class P4P():
 
                     if not self.next_page():
                         break
-            if tid:
-                tasks[tid]['progress'] = 100
-                socketio.emit('event_task_progress', {'tid': tid, 'progress': 100}, namespace='/markets',
-                              broadcast=True)
+
         except Exception as e:
             print('Error: ', e)
             traceback.print_exc()
         finally:
             self.kws_tracking = {}
-            if tid:
-                tasks[tid]['is_running'] = False
-                tasks[tid]['progress'] = 0
-                if tasks[tid]['is_last_run']:
-                    del tasks[tid]
-                    socketio.emit('event_task_last_run_finished', {'tid': tid}, namespace='/markets', broadcast=True)

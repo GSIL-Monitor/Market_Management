@@ -66,9 +66,19 @@ def p4p_record(self, group='all'):
     p4p.crawl(group=group)
 
 @app.task(bind=True, name='tasks.p4p_check')
-def p4p_check(self, group='all'):
+def p4p_check(self, group='all', sub_budget_limited=False):
     p4p = get_p4p(current_task.request.hostname)
-    p4p.monitor(group=group)
+    p4p.monitor(group=group, sub_budget_limited=sub_budget_limited)
+
+@app.task(bind=True, name='tasks.set_sub_budget')
+def p4p_set_sub_budget(self, sub_budget='90.00'):
+    p4p = get_p4p(current_task.request.hostname)
+    p4p.set_sub_budget(sub_budget)
+
+@app.task(bind=True, name='tasks.unset_sub_budget')
+def p4p_unset_sub_budget(self):
+    p4p = get_p4p(current_task.request.hostname)
+    p4p.unset_sub_budget()
 
 @app.task(bind=True, name="tasks.p4p_turn_all_off")
 def p4p_turn_all_off(self, group='all'):
