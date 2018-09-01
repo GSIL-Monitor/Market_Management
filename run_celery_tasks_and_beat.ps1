@@ -1,4 +1,4 @@
-﻿Start-Sleep -Seconds 120
+﻿#Start-Sleep -Seconds 120
 
 #D:
 #cd \workspace\"Market Management"

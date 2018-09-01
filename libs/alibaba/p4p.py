@@ -425,7 +425,9 @@ class P4P():
 
         result = re.search(r'_search_result_data =(.*)page.setPageData\(_search_result_data\)', response.text,
                            re.M | re.DOTALL)
-        obj = json.loads(result.group(1))
+        
+        result = re.sub(',[\n\t ]*}', '}',result.group(1))
+        obj = json.loads(result)
         items = obj['normalList']
         for idx, item in enumerate(items):
             company = {}

@@ -47,7 +47,7 @@ app.conf.beat_schedule = {
     'Eyelashes_p4p_set_sub_budget_0': {                                          # 设置 sub budget
         'task': 'tasks.set_sub_budget',
         'schedule': crontab(minute='30', hour='21'),
-        'kwargs': {'sub_budget': '90.00'},
+        'kwargs': {'sub_budget': '85.00'},
         'options': {'queue': 'Eyelashes_p4p'}
     },
     'Eyelashes_p4p_unset_sub_budget_0': {                                          # 取消 sub budget
@@ -58,7 +58,7 @@ app.conf.beat_schedule = {
     'Eyelashes_p4p_set_sub_budget_1': {                                          # 设置 sub budget
         'task': 'tasks.set_sub_budget',
         'schedule': crontab(minute='0', hour='0'),
-        'kwargs': {'sub_budget': '90.00'},
+        'kwargs': {'sub_budget': '85.00'},
         'options': {'queue': 'Eyelashes_p4p'}
     },
     'Eyelashes_p4p_unset_sub_budget_1': {                                          # 取消 sub budget
