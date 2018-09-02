@@ -408,6 +408,8 @@ class Inquiry:
 
         btn_send = self.browser.find_element_by_css_selector('form.reply-wrapper button.send')
         btn_send.click()
+        
+        time.sleep(1)
         return True
 
     def click(self, btn):

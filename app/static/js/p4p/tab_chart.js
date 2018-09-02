@@ -26,6 +26,7 @@ function Tab_Chart(socket, market=undefined, categories=undefined, directory=und
     let that = this
 
     socket.emit('get_p4p_keywords_crawl_result_file_list', market, function(files){
+        // console.log(files)
         let options = ''
         for(let file of files.reverse()){
             let dt = file.split('.')[0].split('_').pop()

@@ -323,33 +323,33 @@ Tab_Task.prototype.refresh = function(){
 }
 
 Tab_Task.prototype.load_tasks = function(){
-    let that = this
-    this.socket.emit('get_all_tasks', that.market, function(data){
-        data.sort(function(a, b){
-            return a.id > b.id
-        })
-        let $tbody = that.$content.find('table.active_tasks tbody')
-        $tbody.empty()
-        let trs = ''
-        let count = 0
-        for(let task of data){
-            count ++
-            $tbody.append(active_task_to_tr(task, count))
-        }
+    // let that = this
+    // this.socket.emit('get_all_tasks', that.market, function(data){
+    //     data.sort(function(a, b){
+    //         return a.id > b.id
+    //     })
+    //     let $tbody = that.$content.find('table.active_tasks tbody')
+    //     $tbody.empty()
+    //     let trs = ''
+    //     let count = 0
+    //     for(let task of data){
+    //         count ++
+    //         $tbody.append(active_task_to_tr(task, count))
+    //     }
 
-        function try_do(){
-            if (!$tbody.width()) {
-                window.requestAnimationFrame(try_do);
-            }else {
-                for(let task of data){
-                    if(task.is_running && 'progress' in task)
-                    that.update_progress(task.id, task.progress)
-                }
-            }
-        }
-        try_do()
-        console.log(data, $tbody)
-    })
+    //     function try_do(){
+    //         if (!$tbody.width()) {
+    //             window.requestAnimationFrame(try_do);
+    //         }else {
+    //             for(let task of data){
+    //                 if(task.is_running && 'progress' in task)
+    //                 that.update_progress(task.id, task.progress)
+    //             }
+    //         }
+    //     }
+    //     try_do()
+    //     console.log(data, $tbody)
+    // })
 }
 
 function task_to_tr(task){
