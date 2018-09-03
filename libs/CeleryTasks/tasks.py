@@ -7,6 +7,7 @@ from billiard import current_process
 from libs.json import JSON
 import os
 
+from libs.alibaba.alibaba import Alibaba
 from libs.alibaba.p4p import P4P
 from libs.alibaba.inquiry import Inquiry
 from libs.others.osoeco import OSOECO
@@ -38,7 +39,7 @@ import threading
 app = Celery('tasks')
 app.config_from_object('conf.celeryconfig')
 
-app_data = {'p4p':None, 'inquiry':None, 'browser': None}
+app_data = {'alibaba': None, 'p4p':None, 'inquiry':None, 'browser': None}
 
 user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36'
 
@@ -59,6 +60,11 @@ chrome_options_headless.add_argument('--disable-extensions')
 chrome_options_headless.add_argument('--disable-logging')
 chrome_options_headless.add_argument('--disable-infobars')
 chrome_options_headless.add_argument('--ignore-certificate-errors')
+
+@app.task(bind=True, name='tasks.alibaba_update_product')
+def alibaba_update_product(self, data):
+    alibaba = get_alibaba(current_task.request.hostname)
+    alibaba.update_product(data)
 
 @app.task(bind=True, name='tasks.p4p_record')
 def p4p_record(self, group='all'):
@@ -119,6 +125,28 @@ def osoeco_checkin(self):
 def add(self, x, y):
     print('===>', app.conf.broker_url)
     return x+y
+
+def get_alibaba(node):
+
+    if app_data['alibaba'] is not None:
+        return app_data['alibaba']
+
+    text = node.split('@')[0]
+    market_name = text.split(':')[0].split('[')[0]
+    lname = text.split(':')[1] if len(text.split(':')) == 2 else None
+    market = JSON.deserialize('.', 'storage', 'markets.json')[market_name]
+
+    if lname is None or lname == market['lname']:
+        app_data['alibaba'] = Alibaba(market['lid'], market['lpwd'], headless=False, browser=app_data['browser'])
+        app_data['browser'] = app_data['alibaba'].browser
+    else:
+        for account in market['accounts']:
+            print(lname, account)
+            if lname in account['lname']:
+                app_data['alibaba'] = Alibaba(alibaba['lid'], market['lpwd'], headless=False, browser=app_data['browser'])
+                app_data['browser'] = app_data['alibaba'].browser
+    app_data['alibaba'].login()
+    return app_data['alibaba']
 
 def get_inquiry(node):
 
