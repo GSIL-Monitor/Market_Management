@@ -26,7 +26,7 @@ class Alibaba:
     # user_agent = 'Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.117 Safari/537.36'
     chrome_options = webdriver.ChromeOptions()
     chrome_options.add_argument('--disable-gpu')
-    chrome_options.add_argument('--user-agent="'+user_agent+'"')
+    # chrome_options.add_argument('--user-agent="'+user_agent+'"')
     chrome_options.add_argument('--disable-software-rasterizer')
     chrome_options.add_argument('--disable-extensions')
     chrome_options.add_argument('--disable-logging')
@@ -296,7 +296,7 @@ class Alibaba:
             btn_submit = WebDriverWait(self.browser, 15).until(
                 EC.element_to_be_clickable((By.CSS_SELECTOR, 'button#submitFormBtnA')))
 
-        btn_submit.click()
+        self.click(btn_submit)
 
         WebDriverWait(self.browser, 30).until(EC.presence_of_element_located(
             (By.CSS_SELECTOR, '.next-step-item-last.next-step-item-process,.ui2-dialog-transition')))
@@ -314,12 +314,13 @@ class Alibaba:
 
     def update_product(self, data):
         browser = self.browser
+        ali_id = str(data['ali_id'])
+        result = [ali_id, False]
         try:
             api = 'https://hz-productposting.alibaba.com/product/editing.htm?id='
-            ali_id = str(data['ali_id'])
             if not browser:
                 self.notify('danger', "没有登录，请先登录")
-                return False
+                return result
 
             self.notify("primary", "打开产品 [" + ali_id + "] 编辑页面 ... ...")
             browser.get(api + ali_id)
@@ -328,11 +329,10 @@ class Alibaba:
             if buttons:
                 self.click(buttons[0])
 
-            result = False
             if self.update_product_price(data):
-                result = True
+                result = [ali_id, True]
             if self.update_product_detail_pictures(data):
-                result = True
+                result = [ali_id, True]
 
             if result:
                 self.submit_product()

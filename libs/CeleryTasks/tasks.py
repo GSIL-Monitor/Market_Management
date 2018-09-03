@@ -64,7 +64,7 @@ chrome_options_headless.add_argument('--ignore-certificate-errors')
 @app.task(bind=True, name='tasks.alibaba_update_product')
 def alibaba_update_product(self, data):
     alibaba = get_alibaba(current_task.request.hostname)
-    alibaba.update_product(data)
+    return alibaba.update_product(data)
 
 @app.task(bind=True, name='tasks.p4p_record')
 def p4p_record(self, group='all'):
