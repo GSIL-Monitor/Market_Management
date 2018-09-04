@@ -335,7 +335,7 @@ class Alibaba:
             # if self.update_product_detail_pictures(data):
             #     result = [ali_id, True]
 
-            if update_product_detail(data)[1]:
+            if self.update_product_detail(data)[1]:
                 self.submit_product()
                 
         except TimeoutException as e:
