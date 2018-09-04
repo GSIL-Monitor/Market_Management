@@ -329,12 +329,13 @@ class Alibaba:
             if buttons:
                 self.click(buttons[0])
 
-            if self.update_product_price(data):
-                result = [ali_id, True]
-            if self.update_product_detail_pictures(data):
-                result = [ali_id, True]
+            # if self.update_product_price(data):
+            #     result = [ali_id, True]
 
-            if result:
+            # if self.update_product_detail_pictures(data):
+            #     result = [ali_id, True]
+
+            if update_product_detail(data)[1]:
                 self.submit_product()
                 
         except TimeoutException as e:
@@ -415,6 +416,94 @@ class Alibaba:
             browser.find_element_by_css_selector('#mceu_0 button').click()
             WebDriverWait(browser, 5).until(EC.visibility_of_element_located((By.CSS_SELECTOR, '#mceu_46 iframe')))
         return result
+
+
+    def update_product_detail(self, data):
+        ali_id = data['ali_id']
+        result = [ali_id, False]
+        if 'product_detail' not in data:
+            return result
+
+        element = self.browser.find_element_by_css_selector("#struct-superText")
+        ActionChains(self.browser).move_to_element(element).perform()
+        # self.notify("primary", "开始 设置 产品详情页 ... ...")
+        # 点击 详情编辑器 ‘源代码’ 按钮， 清空内容，再切换回 富文本 编辑状态
+        switch_btn = WebDriverWait(self.browser, 5).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, '#mceu_0 button')))
+        switch_btn.click()
+        textarea = WebDriverWait(self.browser, 5).until(
+            EC.visibility_of_element_located((By.CSS_SELECTOR, '#mceu_46 textarea')))
+
+        text = textarea.get_attribute('value')
+        doc = pq(text)
+
+        first_p = None
+        first_img = None
+        while True:
+            first_p = pq(doc.find('p')[0])
+            if first_p.find('img').length == 1:
+                first_img = pq(first_p.find('img')[0])
+
+            if first_p.text().strip() or first_p.find('img').length > 0:
+                break
+
+            if not first_p.text().strip():
+                first_p.remove()
+
+        print(first_img and first_img.attr('ori-height') )
+        if not first_img or first_img.attr('ori-height') != "165":
+            result = [ali_id, True]
+            print('change the title')
+            if first_p.text().strip():
+                first_p.attr('style', "text-align: center; background-color: rgba(255, 103, 108, 1); color: white; padding-top: 8px; padding-bottom: 8px;")
+                first_p.find('span').attr('style', "font-size: 23px;")
+                
+                next_p = first_p.next()
+                if next_p.find('img').length != 0:
+                    first_br = next_p.find('br:first-child')
+                    if first_br:
+                        pq(first_br[0]).remove()
+                else: 
+                    if not next_p.text().strip():
+                        next_p.remove()
+
+            doc.prepend('<p style="margin-bottom: 35px;"><img src="//sc01.alicdn.com/kf/HTB1UVE4Kf5TBuNjSspmq6yDRVXaG/231186930/HTB1UVE4Kf5TBuNjSspmq6yDRVXaG.jpg" alt="contact us 0.jpg" ori-width="750" ori-height="165" /></p>')
+
+            
+            print(doc.find('img').length)
+            print('reduce the number of pictures')
+            if doc.find('img').length > 15:
+                last_p = None
+                while True:
+                    last_p = pq(doc.find('p')[-1])
+                    if last_p.find('img').length>0:
+                        break
+                    else:
+                        last_p.remove()
+
+                if last_p.find('img').length > 1:
+                    last_p.find('img:last-child').remove()
+                    last_p.find('img:last-child').remove()
+
+                last_p.append(data['product_detail']['lp'])
+        else:
+            result = [ali_id, False]
+            print('no need to change')
+        print(doc.find('img').length, result)
+
+        if result[1]:
+            js_templ = "document.querySelector('{selector}').value = '{value}';"
+            js = js_templ.format(selector='#mceu_46 textarea', value=re.sub('\n', '\\\\n', doc.html()))
+            self.browser.find_element_by_css_selector('#mceu_46 textarea').clear()
+            self.browser.execute_script(js)
+    #         self.browser.find_element_by_css_selector('#mceu_0 button').click()
+    #         WebDriverWait(self.browser, 5).until(EC.visibility_of_element_located((By.CSS_SELECTOR, '#mceu_46 iframe')))
+
+        self.browser.find_element_by_css_selector('#mceu_0 button').click()
+        WebDriverWait(self.browser, 5).until(EC.visibility_of_element_located((By.CSS_SELECTOR, '#mceu_46 iframe')))
+
+        return result
+
 
     def post_similar_product(self, product, similar_ali_pid):
 
