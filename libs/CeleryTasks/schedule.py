@@ -13,6 +13,9 @@ minutes_0_60_5_4 = ','.join([str(x) for x in range(4, 60, 5)])
 minutes_0_45_2_0 = ','.join([str(x) for x in range(0, 45, 2)])
 minutes_0_45_2_1 = ','.join([str(x) for x in range(1, 45, 2)])
 
+minutes_0_30_2_0 = ','.join([str(x) for x in range(0, 29, 2)])
+minutes_0_30_2_1 = ','.join([str(x) for x in range(1, 29, 2)])
+
 minutes_30_60_2 = ','.join([str(x) for x in range(30, 60, 2)])
 minutes_20_60_2 = ','.join([str(x) for x in range(20, 60, 2)])
 
@@ -25,19 +28,37 @@ app.conf.beat_schedule = {
     #     'kwargs': {'group': '关注词'},
     #     'options': {'queue': 'Eyelashes_p4p'}
     # },
-    'Eyelashes_p4p_check_0': {                                          # 直通车App
+    'Eyelashes_p4p_check_00': {                                          # 直通车App
         'task': 'tasks.p4p_check',
         'schedule': crontab(minute=minutes_0_45_2_0, hour='14'),
         'kwargs': {'group': '直通车App'},
         'options': {'queue': 'Eyelashes_p4p'}
     },
-    'Eyelashes_p4p_check_1': {                                          # 直通车App
+    'Eyelashes_p4p_check_01': {                                          # 直通车App
         'task': 'tasks.p4p_check',
-        'schedule': crontab(minute=minutes_0_60_2_0, hour='0-13,21-23'),
+        'schedule': crontab(minute=minutes_0_60_2_0, hour='0,3-13,21-22'),
         'kwargs': {'group': '直通车App'},
         'options': {'queue': 'Eyelashes_p4p'}
     },
-    'Eyelashes_p4p_turn_all_off_0': {                                   # 直通车App
+    'Eyelashes_p4p_check_02': {                                          # 直通车App
+        'task': 'tasks.p4p_check',
+        'schedule': crontab(minute=minutes_0_30_2_0, hour='1'),
+        'kwargs': {'group': '直通车App'},
+        'options': {'queue': 'Eyelashes_p4p'}
+    },
+    'Eyelashes_p4p_turn_all_off_00': {                                   # 直通车App
+        'task': 'tasks.p4p_turn_all_off',
+        'schedule': crontab(minute='1', hour='23'),
+        'kwargs': {'group': '直通车App'},
+        'options': {'queue': 'Eyelashes_p4p'}
+    },
+    'Eyelashes_p4p_turn_all_off_01': {                                   # 直通车App
+        'task': 'tasks.p4p_turn_all_off',
+        'schedule': crontab(minute='31', hour='1'),
+        'kwargs': {'group': '直通车App'},
+        'options': {'queue': 'Eyelashes_p4p'}
+    },
+    'Eyelashes_p4p_turn_all_off_02': {                                   # 直通车App
         'task': 'tasks.p4p_turn_all_off',
         'schedule': crontab(minute='46', hour='14'),
         'kwargs': {'group': '直通车App'},
@@ -63,7 +84,7 @@ app.conf.beat_schedule = {
     },
     'Eyelashes_p4p_unset_sub_budget_1': {                                          # 取消 sub budget
         'task': 'tasks.unset_sub_budget',
-        'schedule': crontab(minute='2', hour='2'),
+        'schedule': crontab(minute='31', hour='1'),
         'options': {'queue': 'Eyelashes_p4p'}
     },
     'Eyelashes_p4p_set_sub_budget_2': {                                          # 设置 sub budget
@@ -77,39 +98,45 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='2', hour='5'),
         'options': {'queue': 'Eyelashes_p4p'}
     },
-    'Eyelashes_p4p_check_2': {                                          # 直通车高消费词
-        'task': 'tasks.p4p_check',
-        'schedule': crontab(minute=minutes_0_60_2_1, hour='0-1,22'),
-        'kwargs': {'group': '直通车高消费词', 'sub_budget_limited': True},
-        'options': {'queue': 'Eyelashes_p4p'}
-    },
-    'Eyelashes_p4p_turn_all_off_1': {                                   # 直通车高消费词
-        'task': 'tasks.p4p_turn_all_off',
-        'schedule': crontab(minute='1', hour='2'),
-        'kwargs': {'group': '直通车高消费词'},
-        'options': {'queue': 'Eyelashes_p4p'}
-    },
-    'Eyelashes_p4p_check_3': {                                          # 直通车高消费词
-        'task': 'tasks.p4p_check',
-        'schedule': crontab(minute=minutes_20_60_2, hour='4'),
-        'kwargs': {'group': '直通车高消费词', 'sub_budget_limited': True},
-        'options': {'queue': 'Eyelashes_p4p'}
-    },
-    'Eyelashes_p4p_turn_all_off_2': {                                   # 直通车高消费词
-        'task': 'tasks.p4p_turn_all_off',
-        'schedule': crontab(minute='1', hour='5'),
-        'kwargs': {'group': '直通车高消费词'},
-        'options': {'queue': 'Eyelashes_p4p'}
-    },
-    'Eyelashes_p4p_check_4': {                                          # 直通车高消费词
+    'Eyelashes_p4p_check_10': {                                          # 直通车高消费词
         'task': 'tasks.p4p_check',
         'schedule': crontab(minute=minutes_30_60_2, hour='21'),
         'kwargs': {'group': '直通车高消费词', 'sub_budget_limited': True},
         'options': {'queue': 'Eyelashes_p4p'}
     },
-    'Eyelashes_p4p_turn_all_off_3': {                                   # 直通车高消费词
+    'Eyelashes_p4p_check_11': {                                          # 直通车高消费词
+        'task': 'tasks.p4p_check',
+        'schedule': crontab(minute=minutes_0_60_2_1, hour='0,22'),
+        'kwargs': {'group': '直通车高消费词', 'sub_budget_limited': True},
+        'options': {'queue': 'Eyelashes_p4p'}
+    },
+    'Eyelashes_p4p_check_12': {                                          # 直通车高消费词
+        'task': 'tasks.p4p_check',
+        'schedule': crontab(minute=minutes_0_30_2_1, hour='1'),
+        'kwargs': {'group': '直通车高消费词', 'sub_budget_limited': True},
+        'options': {'queue': 'Eyelashes_p4p'}
+    },
+    'Eyelashes_p4p_check_13': {                                          # 直通车高消费词
+        'task': 'tasks.p4p_check',
+        'schedule': crontab(minute=minutes_20_60_2, hour='4'),
+        'kwargs': {'group': '直通车高消费词', 'sub_budget_limited': True},
+        'options': {'queue': 'Eyelashes_p4p'}
+    },
+    'Eyelashes_p4p_turn_all_off_10': {                                   # 直通车高消费词
         'task': 'tasks.p4p_turn_all_off',
         'schedule': crontab(minute='1', hour='23'),
+        'kwargs': {'group': '直通车高消费词'},
+        'options': {'queue': 'Eyelashes_p4p'}
+    },
+    'Eyelashes_p4p_turn_all_off_11': {                                   # 直通车高消费词
+        'task': 'tasks.p4p_turn_all_off',
+        'schedule': crontab(minute='31', hour='1'),
+        'kwargs': {'group': '直通车高消费词'},
+        'options': {'queue': 'Eyelashes_p4p'}
+    },
+    'Eyelashes_p4p_turn_all_off_12': {                                   # 直通车高消费词
+        'task': 'tasks.p4p_turn_all_off',
+        'schedule': crontab(minute='1', hour='5'),
         'kwargs': {'group': '直通车高消费词'},
         'options': {'queue': 'Eyelashes_p4p'}
     },

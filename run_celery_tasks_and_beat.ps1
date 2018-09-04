@@ -1,10 +1,10 @@
 ﻿#Start-Sleep -Seconds 120
 
-#D:
-#cd \workspace\"Market Management"
+D:
+cd \workspace\"Market Management"
 
-E:
-cd \workspace\python\"Market Management"
+#E:
+#cd \workspace\python\"Market Management"
 .\venv\Scripts\activate.ps1
 
 $env:FORKED_BY_MULTIPROCESSING=1
