@@ -332,11 +332,12 @@ class Alibaba:
             # if self.update_product_price(data):
             #     result = [ali_id, True]
 
-            # if self.update_product_detail_pictures(data):
-            #     result = [ali_id, True]
-
-            if self.update_product_detail(data)[1]:
+            if self.update_product_detail_pictures(data):
+                result = [ali_id, True]
                 self.submit_product()
+                
+            # if self.update_product_detail(data)[1]:
+            #     self.submit_product()
                 
         except TimeoutException as e:
             self.notify('error', '更新产品 [' + ali_id + '] 数据 出错，超时，' + str(e))
@@ -375,19 +376,21 @@ class Alibaba:
             input.send_keys(str(price['price_range'][1]))
             return True
 
+    # data = {"ali_id": xxxxxxxxx, "detail_pictures": [{"old", "//xxxxxx", "new": "//xxxxxxxx"}]}
     def update_product_detail_pictures(self, data):
         result = False
         if 'detail_pictures' not in data:
             return result
         pictures = data['detail_pictures']
-        browser = self.browser
 
-        element = browser.find_element_by_css_selector("#editor-container")
-        ActionChains(browser).move_to_element(element).perform()
+        element = self.browser.find_element_by_css_selector("#struct-superText")
+        ActionChains(self.browser).move_to_element(element).perform()
         # self.notify("primary", "开始 设置 产品详情页 ... ...")
         # 点击 详情编辑器 ‘源代码’ 按钮， 清空内容，再切换回 富文本 编辑状态
-        browser.find_element_by_css_selector('#mceu_0 button').click()
-        textarea = WebDriverWait(browser, 5).until(
+        switch_btn = WebDriverWait(self.browser, 5).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, '#mceu_0 button')))
+        switch_btn.click()
+        textarea = WebDriverWait(self.browser, 5).until(
             EC.visibility_of_element_located((By.CSS_SELECTOR, '#mceu_46 textarea')))
 
         text = textarea.get_attribute('value')
@@ -411,11 +414,13 @@ class Alibaba:
         if result:
             js_templ = "document.querySelector('{selector}').value = '{value}';"
             js = js_templ.format(selector='#mceu_46 textarea', value=re.sub('\n', '\\\\n', str(soup)))
-            browser.find_element_by_css_selector('#mceu_46 textarea').clear()
-            browser.execute_script(js)
-            browser.find_element_by_css_selector('#mceu_0 button').click()
-            WebDriverWait(browser, 5).until(EC.visibility_of_element_located((By.CSS_SELECTOR, '#mceu_46 iframe')))
+            self.browser.find_element_by_css_selector('#mceu_46 textarea').clear()
+            self.browser.execute_script(js)
+
+        self.browser.find_element_by_css_selector('#mceu_0 button').click()
+        WebDriverWait(self.browser, 5).until(EC.visibility_of_element_located((By.CSS_SELECTOR, '#mceu_46 iframe')))
         return result
+
 
 
     def update_product_detail(self, data):
