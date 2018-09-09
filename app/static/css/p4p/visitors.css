@@ -1,0 +1,19 @@
+.card-body>.visitors{
+    position: absolute;
+    top: 0px;
+    bottom: 0px;
+    width: 100%;
+}
+.visitors div.svg_container{
+    margin: 0px -10px;
+    /*background-color: lightgrey;*/
+    height:500px;
+}
+
+.visitors .region_selection label.active{
+    background-color: #007bff !important;
+}
+
+.visitors td.keywords .is_searched{
+    font-weight: bold;
+}
