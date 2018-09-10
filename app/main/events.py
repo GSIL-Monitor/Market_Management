@@ -15,6 +15,7 @@ from tkinter import filedialog
 import os
 import re
 import time
+import pendulum
 
 from selenium import webdriver
 
@@ -157,7 +158,28 @@ from libs.crawlers.keywords_crawler_amazon import KwclrAmazon
 #
 #         tasks.append(task)
 #     return tasks
+@socketio.on('get_visitors', namespace='/markets')
+def get_visitors(market, start_date='2018-08-01', end_date=None):
 
+    start = pendulum.parse(start_date)
+    if end_date:
+        end = pendulum.parse(end_date)
+    else:
+        end = pendulum.now()
+
+    root = market['directory']+'_config'
+    visitor_dir = root+'//'+'visitors'
+    files = os.listdir(visitor_dir)
+
+    visitors = []
+    for f in files:
+        if not f.startswith('visitors_') or not f.endswith('.json'):
+            continue
+
+        dt = pendulum.parse(re.search('visitors_(.*).json', f).group(1))
+        if start <= dt <= end:
+            visitors += JSON.deserialize(root, 'visitors', f)
+    return visitors
 
 @socketio.on('get_p4p_keywords_crawl_result_file_list', namespace='/markets')
 def get_p4p_keywords_crawl_result_file_list(market):
