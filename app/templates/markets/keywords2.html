@@ -1,0 +1,85 @@
+<template id="template_keywords2">
+    <div class="keywords2 template_content">
+        <div class="form-group keyword_groups">
+            <span class="section_title"><span><h5>关键词组</h5></span><span class=""></span></span>
+            <div class="input-group float-right">
+                <input type="text" class="form-control" placeholder="新关键词组" >
+                <div class="input-group-append">
+                    <button class="btn btn-primary" id="add_keywords_group" type="button">Add</button>
+                    <button class="btn btn-primary" id="del_keywords_group" type="button">Delete</button>
+                </div>
+            </div>
+            <hr>
+            <div id="keywords_group_container">
+            </div>
+        </div>
+        <div class="form-group main_keyword">
+            <span class="section_title"><span><h5>核心关键词</h5></span><span class=""></span></span>
+            <div class="input-group float-right">
+                <input type="text" class="form-control" placeholder="核心关键词" >
+                <div class="input-group-append">
+                    <button class="btn btn-primary" id="add_main_keyword" type="button">Add</button>
+                    <button class="btn btn-primary" id="del_main_keyword" type="button">Delete</button>
+                </div>
+            </div>
+            <hr>
+            <div id="main_keywords_container">
+            </div>
+        </div>
+        <div class="form-group one_words">
+            <span class="section_title"><span><h5>词组</h5></span><span class=""></span></span>
+            <div class="input-group float-right">
+                <input type="text" class="form-control" placeholder="词组" >
+                <div class="input-group-append">
+                    <button class="btn btn-primary" id="add_one_word" type="button">Add</button>
+                    <button class="btn btn-primary" id="del_one_word" type="button">Delete</button>
+                </div>
+            </div>
+            <hr>
+            <div id="one_words_container">
+            </div>
+        </div>
+        <div class="form-group brands">
+            <span class="section_title"><span><h5>品牌词</h5></span><span class=""></span></span>
+            <div class="input-group float-right">
+                <input type="text" class="form-control" placeholder="品牌词">
+                <div class="input-group-append">
+                    <button class="btn btn-primary" id="add_brands" type="button">Add</button>
+                    <button class="btn btn-primary" id="del_brands" type="button">Delete</button>
+                </div>
+            </div>
+            <hr>
+            <div id="brands_container">
+            </div>
+        </div>
+        <div class="form-group keyword_sort_out">
+            <span class="section_title"><h5>整理关键词</h5></span>
+            <div class="input-group float-right">
+                <input type="text" class="form-control" placeholder="过滤词，空格分开" >
+                <div class="input-group-append">
+                    <button class="btn btn-primary" id="keyword_list_filter" type="button">Filter</button><!-- 
+                    <button class="btn btn-primary" id="keyword_list_reset" type="button">Reset</button> -->
+                    <button class="btn btn-primary" id="all_keywords" type="button">All</button>
+                </div>
+            </div>
+            <hr>
+            <div class="">
+                <table class="table table-hover table-sm table-striped keywords_list">
+                    <thead class='thead-dark'>
+                        <tr>
+                            <th class="number" scope="col">序</th>
+                            <th class="number" scope="col">竞</th>
+                            <th class="number" scope="col">窗</th>
+                            <th class="number" scope="col">搜</th>
+                            <th class="keyword" scope="col">关键词</th>
+                            <th scope="col">修饰词</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</template>

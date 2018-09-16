@@ -1,0 +1,26 @@
+.keywords2 .form-group>.input-group.float-right{
+    width:400px;
+    top: -35px;
+}
+
+.keywords2 span.badge{
+    margin-left:5px;
+    margin-right:5px;
+    cursor:pointer;
+}
+.keywords2 th.keyword,
+.keywords2 td.keyword{
+    width:250px;
+}
+.keywords2 table.keywords_list{
+    max-width:660px;
+}
+.keywords2 table.keywords_list tbody{
+    text-align: right;
+}
+.keywords2 table .number{
+    width:40px;
+}
+.keywords2 span.mark{
+    background-color: lightblue;
+}
