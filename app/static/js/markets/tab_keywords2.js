@@ -211,7 +211,7 @@ function Tab_keywords2(socket, market, categories=undefined, directory=undefined
                     continue
                 }
                 for(let ow of that.one_words){
-                    keyword = keyword.replace(ow, ow.replace(' ', '_'))
+                    keyword = keyword.replace(ow, ow.split(' ').join('_'))
                 }
 
                 item.keyword = keyword
