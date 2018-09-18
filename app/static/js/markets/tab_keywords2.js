@@ -10,6 +10,7 @@ function Tab_keywords2(socket, market, categories=undefined, directory=undefined
     this.main_keywords = {}
     this.one_words = []
     this.brands = []
+    this.binding = {}
 
     this.load()
     // let buttons = `<button type="button" class="btn btn-sm btn-primary">保 存</button>`
@@ -199,6 +200,42 @@ function Tab_keywords2(socket, market, categories=undefined, directory=undefined
     // this.$content.find('#keyword_list_reset').on('click', function(){
     //     that.$content.find('table.keywords_list tbody tr').show()
     // })
+    this.$content.find('table.keywords_list tbody').on('click', 'tr', function(){
+        let $tr = $(this)
+        $tr.toggleClass("selected")
+    })
+
+    $('body').on("keydown", function(e){
+        console.log('keydown: ', e.key);
+        if(e.key === 'Escape'){
+            that.$content.find('table.keywords_list tbody tr').removeClass('selected')
+        }
+        if(e.key == 'Shift'){
+            that.shift_pressed = true
+        }
+    })
+    $('body').on("keyup", function(e){
+        console.log('keyup: ', e.key);
+        if(e.key == 'Shift'){
+            that.shift_pressed = false
+        }
+    })
+    this.$content.find('#binding_main_keyword_button').click(function(){
+        let $trs = that.$content.find('table.keywords_list tr.selected')
+        $trs.find('td.main_keywrod').empty()
+
+        let mkw = $(this).parent().prev().val().trim()
+        for(let tr of $trs){
+            let $tr = $(tr)
+            let kw = $tr.data('word')
+            $tr.find('td.main_keyword').text(mkw)
+            that.binding[$tr.find('td.keyword').text().trim()] = mkw
+
+            console.log(kw, mkw)
+        }
+        that.save()
+        that.$content.find('table.keywords_list tr.selected').removeClass('selected')
+    })
 
     this.fetch_values_from_server()
         .then(function(results){
@@ -250,15 +287,20 @@ Tab_keywords2.prototype.load_keyword_list = function(result, keyword=""){
         if(indices.length!=keyword.split(' ').length && keyword){
             continue
         }
-
+        let key = item.keyword.replace('_', ' ')
         let tds =''
         tds = `${tds}<td class="number">${idx}</td>`
         tds = `${tds}<td class="number">${item.supplier_competition}</td>`
         tds = `${tds}<td class="number">${item.showroom_count}</td>`
         tds = `${tds}<td class="number">${item.search_frequency}</td>`
         tds = `${tds}<td class="keyword">${words.join(' ')}</td>`
+        if(key in this.binding){
+            tds = `${tds}<td class="main_keyword">${this.binding[key]}</td>`
+        }else{
+            tds = `${tds}<td class="main_keywrod"></td>`
+        }
         tds = `${tds}<td></td>`
-        trs = `${trs}<tr data-word="${item.keyword.replace('_', ' ')}">${tds}</tr>`
+        trs = `${trs}<tr data-word="${key}">${tds}</tr>`
         idx++
     }
     tbody.empty().append(trs)
@@ -269,6 +311,7 @@ Tab_keywords2.prototype.save = function(){
     let obj = {'keyword_groups':this.keyword_groups, 'main_keywords':this.main_keywords}
     obj['one_words'] = this.one_words
     obj['brands'] = this.brands
+    obj['binding'] = this.binding
     this.socket.emit('serialize', obj, this.market, [], file)
 }
 
@@ -286,6 +329,20 @@ Tab_keywords2.prototype.load = function(){
         if(data.brands){
             that.brands = data.brands
         }
+        that.binding = {}
+        if(data.binding){
+            that.binding = data.binding
+        }
+
+        let opts = ''
+        for(let key in that.keyword_groups){
+            let group = that.keyword_groups[key]
+            for(let mkw of group){
+                opts = `${opts}<option value="${mkw}">${mkw}</option>`
+            }
+        }
+        $('#binding_main_keyword').empty().html(opts)
+
 
         let div_groups = that.$content.find('#keywords_group_container')
         for(let group in that.keyword_groups){

@@ -1,5 +1,5 @@
 .keywords2 .form-group>.input-group.float-right{
-    width:400px;
+    width:600px;
     top: -35px;
 }
 
@@ -12,8 +12,13 @@
 .keywords2 td.keyword{
     width:250px;
 }
+.keywords2 th.main_keywrod,
+.keywords2 td.main_keywrod{
+    width:150px;
+}
+
 .keywords2 table.keywords_list{
-    max-width:660px;
+    max-width:960px;
 }
 .keywords2 table.keywords_list tbody{
     text-align: right;
@@ -23,4 +28,10 @@
 }
 .keywords2 span.mark{
     background-color: lightblue;
+}
+.keywords2 table.keywords_list tr{
+    cursor: pointer;
+}
+.keywords2 table.keywords_list tr.selected{
+    background-color: lightgreen;
 }
