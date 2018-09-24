@@ -228,6 +228,7 @@ function Tab_keywords2(socket, market, categories=undefined, directory=undefined
         for(let tr of $trs){
             let $tr = $(tr)
             let kw = $tr.data('word')
+            console.log(mkw)
             $tr.find('td.main_keyword').text(mkw)
             that.binding[$tr.find('td.keyword').text().trim()] = mkw
 
@@ -235,6 +236,19 @@ function Tab_keywords2(socket, market, categories=undefined, directory=undefined
         }
         that.save()
         that.$content.find('table.keywords_list tr.selected').removeClass('selected')
+    })
+
+    this.$content.find('#unbinded_keywords').click(function(){
+        let trs = that.$content.find('table.keywords_list tbody tr')
+        for(let tr of trs){
+            let $tr = $(tr)
+            let mkw = $tr.find('td.main_keyword').text().trim()
+            if(mkw){
+                $tr.hide()
+            }else{
+                $tr.show()
+            }
+        }
     })
 
     this.fetch_values_from_server()
@@ -294,10 +308,10 @@ Tab_keywords2.prototype.load_keyword_list = function(result, keyword=""){
         tds = `${tds}<td class="number">${item.showroom_count}</td>`
         tds = `${tds}<td class="number">${item.search_frequency}</td>`
         tds = `${tds}<td class="keyword">${words.join(' ')}</td>`
-        if(key in this.binding){
-            tds = `${tds}<td class="main_keyword">${this.binding[key]}</td>`
+        if(item.keyword in this.binding){
+            tds = `${tds}<td class="main_keyword">${this.binding[item.keyword]}</td>`
         }else{
-            tds = `${tds}<td class="main_keywrod"></td>`
+            tds = `${tds}<td class="main_keyword"></td>`
         }
         tds = `${tds}<td></td>`
         trs = `${trs}<tr data-word="${key}">${tds}</tr>`
