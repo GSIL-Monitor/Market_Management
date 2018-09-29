@@ -50,27 +50,27 @@ class Visitor:
         css_tbody = '#J-visitors-tbl-tbody'
         tbody = WebDriverWait(self.browser, 15).until(
             EC.visibility_of_element_located((By.CSS_SELECTOR, css_tbody)))
-        
+
         visitors = []
         fns = os.listdir(self.visitor_dir)
-        
+
         for tr in tbody.find_elements_by_css_selector(css_tbody+' tr.J-visitors-table-tr'):
             ActionChains(self.browser).move_to_element(tr).perform()
             date = tr.find_element_by_css_selector('td.td-checkbox input').get_attribute('statdate')
-            
+
             fn = 'visitors_'+date+'.json'
             if fn in fns:
                 break
-            
+
             visitor = {}
             visitor['id'] = tr.find_element_by_css_selector('td.td-checkbox input').get_attribute('visitorid')
             visitor['idx'] = tr.find_element_by_css_selector('td.td-checkbox input').get_attribute('visitoridx')
             visitor['date'] = date
             visitor['region'] = tr.find_element_by_css_selector('td.td-region span').get_attribute('title')
-            
+
             pv_span = tr.find_element_by_css_selector('td.td-pv span')
             visitor['pv'] = pv_span.text
-            
+
             visitor['pv-detail'] = []
             if visitor['pv'] != '0':
                 css_pv_detail = '#J-visitor-detail'
@@ -81,7 +81,7 @@ class Visitor:
                 while True:
                     pv_detail_tbody = WebDriverWait(self.browser, 15).until(
                         EC.visibility_of_element_located((By.CSS_SELECTOR, css_pv_detail_body)))
-                    
+
                     for pv_tr in pv_detail_tbody.find_elements_by_css_selector('tr'):
                         pv = {}
                         pv['idx'] = pv_tr.find_element_by_css_selector('td.visitor-detail-index').text
@@ -99,13 +99,23 @@ class Visitor:
                         pv['stay'] = pv_tr.find_element_by_css_selector('td.visitor-detail-stay').text
                         pv['time'] = pv_tr.find_element_by_css_selector('td.visitor-detail-time').text
                         visitor['pv-detail'].append(pv)
-                    
+
                     next_pv_detail_button = self.browser.find_elements_by_css_selector(css_pv_detail_pagination + ' .ui-pagination-active + a')
                     if next_pv_detail_button:
-                        next_pv_detail_button[0].click()
+                        while True:
+                            try:
+                                ActionChains(self.browser).move_to_element(next_pv_detail_button[0]).perform()
+                                next_pv_detail_button[0].click()
+                                break
+                            except WebDriverException as e:
+                                if 'is not clickable at point' in str(e):
+                                    self.browser.implicitly_wait(0.5)
+                                    continue
+                                else:
+                                    raise e
                     else:
                         break
-                        
+
                 while True:
                     try:
                         self.browser.find_element_by_css_selector(css_pv_detail_close).click()
@@ -116,7 +126,7 @@ class Visitor:
                             continue
                         else:
                             raise e
-            
+
             visitor['stay'] = tr.find_element_by_css_selector('td.td-stay-duration').text
 
             kws_div = tr.find_elements_by_css_selector('td.td-search-keywords>div.search-keywords')
@@ -140,7 +150,7 @@ class Visitor:
                 visitor['website-acts'].append(div.get_attribute('textContent'))
 
             visitors.append(visitor)
-            
+
         return visitors
 
     def switch_to_last_31_days(self):
