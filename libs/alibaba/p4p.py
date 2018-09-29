@@ -427,6 +427,8 @@ class P4P():
                            re.M | re.DOTALL)
         
         result = re.sub(',[\n\t ]*}', '}',result.group(1))
+        result = re.sub('"" === "true"', '"\\"\\" === \\"true\\""', result)
+
         obj = json.loads(result)
         items = obj['normalList']
         for idx, item in enumerate(items):
