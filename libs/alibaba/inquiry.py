@@ -397,14 +397,16 @@ class Inquiry:
 
         WebDriverWait(self.browser, 15).until(
             EC.frame_to_be_available_and_switch_to_it((By.CSS_SELECTOR, '#inquiry-content_ifr')))
-        body = self.browser.find_element_by_tag_name('body')
-        self.click(body)
 
         js = self.reply_js_template.format(message=message)
         self.browser.execute_script(js)
-        self.browser.switch_to.default_content()
 
         time.sleep(1)
+
+        body = self.browser.find_element_by_tag_name('body')
+        self.click(body)
+
+        self.browser.switch_to.default_content()
 
         btn_send = self.browser.find_element_by_css_selector('form.reply-wrapper button.send')
         btn_send.click()
