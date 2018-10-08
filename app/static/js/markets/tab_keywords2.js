@@ -77,7 +77,7 @@ function Tab_keywords2(socket, market, categories=undefined, directory=undefined
             $(this).removeClass('badge-secondary').addClass('badge-primary')
         }
         let main_keyword = $(this).text().trim()
-        that.load_keyword_list(that.hot_searched_keywords, main_keyword)
+        that.load_main_keyword_list(main_keyword)
     })
     this.$content.find('#del_main_keyword').on('click', function(){
         let group = that.$content.find('#keywords_group_container span.badge-primary')
@@ -272,6 +272,55 @@ function Tab_keywords2(socket, market, categories=undefined, directory=undefined
         }).catch(error => console.log(error))
 }
 Tab_keywords2.prototype = Tab.prototype
+
+Tab_keywords2.prototype.load_main_keyword_list = function(mkw){
+    let tbody = $('.keyword_sort_out table.keywords_list tbody')
+    let trs = ''
+    let idx = 1
+    for(let item of this.hot_searched_keywords){
+        let words = []
+        let indices = []
+
+        let ws = mkw.split(' ')
+        let last_index = undefined
+        for(let word of item.keyword.split(' ')){
+            let index = ws.indexOf(word)
+            if(index == -1){
+                words.push(word)
+            }else{
+                words.push(`<span class="mark">${word}</span>`)
+                if(last_index == undefined || last_index < index){
+                    indices.push(index)
+                    last_index = index
+                }else{
+                    break
+                }
+            }
+        }
+
+        if(!(item.keyword in this.binding) || this.binding[item.keyword] != mkw){
+            continue
+        }
+        
+        let key = item.keyword.replace('_', ' ')
+        let tds =''
+        tds = `${tds}<td class="number">${idx}</td>`
+        tds = `${tds}<td class="number">${item.supplier_competition}</td>`
+        tds = `${tds}<td class="number">${item.showroom_count}</td>`
+        tds = `${tds}<td class="number">${item.search_frequency}</td>`
+        tds = `${tds}<td class="keyword">${words.join(' ')}</td>`
+        if(item.keyword in this.binding){
+            tds = `${tds}<td class="main_keyword">${this.binding[item.keyword]}</td>`
+        }else{
+            tds = `${tds}<td class="main_keyword"></td>`
+        }
+        tds = `${tds}<td></td>`
+        trs = `${trs}<tr data-word="${key}">${tds}</tr>`
+        idx++
+    }
+    tbody.empty().append(trs)
+
+}
 
 Tab_keywords2.prototype.load_keyword_list = function(result, keyword=""){
     let tbody = $('.keyword_sort_out table.keywords_list tbody')
