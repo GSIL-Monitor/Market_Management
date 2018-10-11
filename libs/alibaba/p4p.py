@@ -404,30 +404,34 @@ class P4P():
         return success
 
     def find_sponsors(self, kws):
+
+        top_sponsor = None
+        sponsor_list = []
+
         url = 'https://www.alibaba.com/trade/search?fsb=y&IndexArea=product_en&viewtype=L&CatId=&SearchText=' + re.sub(
             ' +', '+', kws)
         self.headers['Referer'] = url
 
         response = None
+        result = None
         while response is None:
             try:
                 response = requests.get(url, headers=self.headers)
+
+                result = re.search(r'_search_result_data =(.*)page.setPageData\(_search_result_data\)', response.text,
+                               re.M | re.DOTALL)
+
+                result = re.sub(',[\n\t ]*}', '}',result.group(1))
+                result = re.sub('"" === "true"', '"\\"\\" === \\"true\\""', result)
+
                 break
+
             except Exception as e:
                 traceback.print_exc()
                 time.sleep(3)
                 print('====================== retry in 3 seconds =================================')
                 response = None
                 continue
-
-        top_sponsor = None
-        sponsor_list = []
-
-        result = re.search(r'_search_result_data =(.*)page.setPageData\(_search_result_data\)', response.text,
-                           re.M | re.DOTALL)
-        
-        result = re.sub(',[\n\t ]*}', '}',result.group(1))
-        result = re.sub('"" === "true"', '"\\"\\" === \\"true\\""', result)
 
         obj = json.loads(result)
         items = obj['normalList']
