@@ -349,6 +349,8 @@ class P4P():
                 WebDriverWait(self.browser, 15).until(
                     EC.invisibility_of_element_located((By.CSS_SELECTOR, 'div.bp-loading-panel')))
 
+                # self.browser.execute_script("document.body.style.zoom='90%'")
+                
                 # try to close all follow-me-popups
                 while True:
                     btn_close = self.browser.find_elements_by_css_selector('div.follow-me-close')
@@ -488,7 +490,7 @@ class P4P():
                 time.sleep(0.5)
                 continue
             except ValueError:
-                prices = []
+                # prices = []
                 break
         if close:
             webdriver.ActionChains(self.browser).send_keys(Keys.ESCAPE).perform()
@@ -667,6 +669,11 @@ class P4P():
                         btn = price_table_tbody.find_element_by_css_selector(
                             'td:nth-child(' + str(int(position) + 1) + ') a, td:last-child a')
                         p = btn.text.strip()
+                        if p == '--':
+                            pre_position = int(position) - 1
+                            position = str(pre_position)
+                            continue
+
                         cp = self.browser.find_element_by_css_selector(
                             '.sc-manage-edit-price-dialog input[name="addPrice"]').get_attribute('value')
 
