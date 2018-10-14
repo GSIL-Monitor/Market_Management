@@ -219,7 +219,6 @@ class P4P():
             pass
 
     def monitor(self, group='all', sub_budget_limited=False):
-
         if sub_budget_limited and self.redis.get(self.market['name'] + '_p4p_sub_budget') is not None:
             if float(self.redis.get(self.market['name'] + '_p4p_sub_budget')) < 0:
                 if self.redis.get(self.market['name'] + '_p4p_sub_budget_overflow') is not None:
@@ -239,6 +238,8 @@ class P4P():
                 print('switch to group:', group)
                 all_kws_count = self.switch_to_group(group)
                 #             time.sleep(5)
+                # self.browser.execute_script("document.body.style.zoom='90%'")
+                
                 kws_count = 0
                 while True:
                     css_selector = "div.keyword-manage .bp-table-main-wraper>table"
@@ -278,6 +279,7 @@ class P4P():
                             keywords.append([dt, id, kws, grp, prices, sponsors])
 
                         current_position = self.find_sponsor_list_position(sponsors=sponsors['sponsor_list'])
+                        
                         click_position = self.get_click_position(id, current_position)
 
                         if click_position != -1:
@@ -348,8 +350,6 @@ class P4P():
 
                 WebDriverWait(self.browser, 15).until(
                     EC.invisibility_of_element_located((By.CSS_SELECTOR, 'div.bp-loading-panel')))
-
-                # self.browser.execute_script("document.body.style.zoom='90%'")
                 
                 # try to close all follow-me-popups
                 while True:
@@ -418,7 +418,7 @@ class P4P():
         result = None
         while response is None:
             try:
-                response = requests.get(url, headers=self.headers)
+                response = requests.get(url, headers=self.headers, timeout=(3, 10))
 
                 result = re.search(r'_search_result_data =(.*)page.setPageData\(_search_result_data\)', response.text,
                                re.M | re.DOTALL)
@@ -429,9 +429,10 @@ class P4P():
                 break
 
             except Exception as e:
+                print('Error: ', e)
                 traceback.print_exc()
                 time.sleep(3)
-                print('====================== retry in 3 seconds =================================')
+                print('============================== retry in 3 seconds =================================')
                 response = None
                 continue
 
@@ -485,8 +486,10 @@ class P4P():
 
                 self.check_balance()
                 break
-            except StaleElementReferenceException:
+            except StaleElementReferenceException as e:
                 #             self.browser.implicitly_wait(0.5)
+                print('Error: ', e)
+                traceback.print_exc()
                 time.sleep(0.5)
                 continue
             except ValueError:
@@ -494,6 +497,7 @@ class P4P():
                 break
         if close:
             webdriver.ActionChains(self.browser).send_keys(Keys.ESCAPE).perform()
+
         return [prices, sponsors]
 
     def find_sponsor_list_position(self, kws=None, sponsors=None):

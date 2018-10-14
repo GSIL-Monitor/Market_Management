@@ -187,11 +187,24 @@ class Inquiry:
         return { 'messages': messages, 'buyer': buyer}
 
     def open_inquiry_in_new_tab(self, inquiry):
-        href = self.browser.find_element_by_css_selector('a[data-trade-id="' + inquiry['id'] + '"]').get_attribute(
-            'href')
-        self.browser.execute_script("window.open('');")
-        self.browser.switch_to.window(self.browser.window_handles[1])
-        self.browser.get(href)
+
+        count_retry = 0
+        while True:
+            try:
+                href = self.browser.find_element_by_css_selector('a[data-trade-id="' + inquiry['id'] + '"]').get_attribute(
+                    'href')
+
+                self.browser.execute_script("window.open('');")
+                self.browser.switch_to.window(self.browser.window_handles[1])
+                self.browser.get(href)
+                break
+            except NoSuchElementException as e:
+                count_retry += 1
+                if count_retry < 5:
+                    time.sleep(1)
+                    continue
+                else:
+                    raise e
 
     def close_inquiry_and_switch_back(self):
         self.browser.close()
@@ -263,8 +276,12 @@ class Inquiry:
         #     return True
         # else:
         #     return False
+        if not enquiry['is_new']:
+            return False
+
         print('==------------------------------------------------------==')
         print(self.lname.lower(), enquiry['responsible_person'].lower())
+
         if enquiry['responsible_person'].lower() != self.lname.lower():
             return False
 
@@ -402,11 +419,12 @@ class Inquiry:
         self.browser.execute_script(js)
 
         time.sleep(1)
-
+        
         body = self.browser.find_element_by_tag_name('body')
         self.click(body)
 
         self.browser.switch_to.default_content()
+
 
         btn_send = self.browser.find_element_by_css_selector('form.reply-wrapper button.send')
         btn_send.click()
