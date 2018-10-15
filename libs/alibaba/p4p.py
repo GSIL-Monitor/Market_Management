@@ -6,6 +6,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import WebDriverException
+from selenium.common.exceptions import TimeoutException
 from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import ElementNotVisibleException
 from selenium.common.exceptions import StaleElementReferenceException
@@ -252,7 +253,10 @@ class P4P():
                         kws_count += 1
 
                         print('index:', idx, len(trs), end=' > ')
-                        ActionChains(self.browser).move_to_element(tr).perform()
+
+                        if idx > 9:
+                            ActionChains(self.browser).move_to_element(tr).perform()
+
                         id = tr.find_element_by_css_selector('td:first-child input').get_attribute('value').strip()
                         # if id not in self.keywords_list['monitor']:
                         #     print('skipped_not_in_monitoring')
@@ -285,10 +289,16 @@ class P4P():
                         if click_position != -1:
                             self.set_price(position=click_position)
                         else:
-                            webdriver.ActionChains(self.browser).send_keys(Keys.ESCAPE).perform()
-
-                        WebDriverWait(self.browser, 15).until(
-                            EC.invisibility_of_element_located((By.CSS_SELECTOR, 'div.ui-mask')))
+                            while True:
+                                try:
+                                    webdriver.ActionChains(self.browser).send_keys(Keys.ESCAPE).perform()
+                                    WebDriverWait(self.browser, 15).until(
+                                        EC.invisibility_of_element_located((By.CSS_SELECTOR, 'div.ui-mask')))
+                                    break
+                                except TimeoutException as e:
+                                    print('Exception:', e)
+                                    traceback.print_exc()
+                                    continue
 
                         if not self.is_on(tr):
                             print('make selected', end=" > ")
@@ -418,7 +428,7 @@ class P4P():
         result = None
         while response is None:
             try:
-                response = requests.get(url, headers=self.headers, timeout=(3, 10))
+                response = requests.get(url, headers=self.headers, timeout=(10, 20))
 
                 result = re.search(r'_search_result_data =(.*)page.setPageData\(_search_result_data\)', response.text,
                                re.M | re.DOTALL)
@@ -625,7 +635,12 @@ class P4P():
             except StaleElementReferenceException as e:
                 self.browser.implicitly_wait(1)
                 continue
+                
         print('next_page:', success)
+        if success:
+            element = self.browser.find_element_by_css_selector('div.search-form')
+            ActionChains(self.browser).move_to_element(element).perform()
+
         return success
 
     def set_price(self, tr=None, position=None, price=None):
@@ -693,7 +708,18 @@ class P4P():
                         position += 1
 
                 confirm = self.browser.find_element_by_css_selector('.ui2-dialog-btn input[data-role="confirm"]')
-                self.click(confirm)
+                
+                while True:
+                    try:
+                        self.click(confirm)
+                        WebDriverWait(self.browser, 3).until(
+                            EC.invisibility_of_element_located((By.CSS_SELECTOR, 'div.ui-mask')))
+                        break
+                    except TimeoutException as e:
+
+                        print('Exception:', e)
+                        traceback.print_exc()
+                        continue
                 break
             except StaleElementReferenceException:
                 self.browser.implicitly_wait(0.5)
