@@ -282,8 +282,14 @@ class P4P():
                         if prices:
                             keywords.append([dt, id, kws, grp, prices, sponsors])
 
-                        current_position = self.find_sponsor_list_position(sponsors=sponsors['sponsor_list'])
-                        
+                        current_position = 5
+                        try:
+                            current_position = self.find_sponsor_list_position(sponsors=sponsors['sponsor_list'])
+                        except Exception as e:
+                            print('Exception:', e)
+                            traceback.print_exc()
+                            current_position = 5
+
                         click_position = self.get_click_position(id, current_position)
 
                         if click_position != -1:

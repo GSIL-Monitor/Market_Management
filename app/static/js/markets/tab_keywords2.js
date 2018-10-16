@@ -254,7 +254,8 @@ function Tab_keywords2(socket, market, categories=undefined, directory=undefined
     this.fetch_values_from_server()
         .then(function(results){
             
-            let brands = that.brands.join('|')
+            let brands = '\\b'+that.brands.join('\\b|\\b')+'\\b'
+            // let brands = that.brands.join('|')
             console.log(brands)
             for(let item of results[0]){
                 let keyword = item.keyword
