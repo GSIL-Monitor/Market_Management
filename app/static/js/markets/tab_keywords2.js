@@ -238,17 +238,20 @@ function Tab_keywords2(socket, market, categories=undefined, directory=undefined
         that.$content.find('table.keywords_list tr.selected').removeClass('selected')
     })
 
-    this.$content.find('#unbinded_keywords').click(function(){
-        let trs = that.$content.find('table.keywords_list tbody tr')
-        for(let tr of trs){
-            let $tr = $(tr)
-            let mkw = $tr.find('td.main_keyword').text().trim()
-            if(mkw){
-                $tr.hide()
-            }else{
-                $tr.show()
-            }
+    this.$content.find('#unbinded_keywords_filter').click(function(){
+
+        let name = $(this).parent().prev().val().trim()
+        if(!name){
+            console.log('no word was inputed')
+            return
         }
+        console.log(name)
+
+        that.load_keyword_list(that.hot_searched_keywords, name, false)
+    })
+
+    this.$content.find('#unbinded_keywords').click(function(){
+        that.load_keyword_list(that.hot_searched_keywords, '', false)
     })
 
     this.fetch_values_from_server()
@@ -323,7 +326,7 @@ Tab_keywords2.prototype.load_main_keyword_list = function(mkw){
 
 }
 
-Tab_keywords2.prototype.load_keyword_list = function(result, keyword=""){
+Tab_keywords2.prototype.load_keyword_list = function(result, keyword="", binded=undefined){
     let tbody = $('.keyword_sort_out table.keywords_list tbody')
     let trs = ''
     let idx = 1
@@ -332,32 +335,45 @@ Tab_keywords2.prototype.load_keyword_list = function(result, keyword=""){
         let indices = []
 
         let ws = keyword.split(' ')
-        let last_index = undefined
-        for(let word of item.keyword.split(' ')){
-            let index = ws.indexOf(word)
-            if(index == -1){
-                words.push(word)
-            }else{
-                words.push(`<span class="mark">${word}</span>`)
-                if(last_index == undefined || last_index < index){
-                    indices.push(index)
-                    last_index = index
+
+        if(keyword){
+            for(let word of item.keyword.split(' ')){
+                let index = ws.indexOf(word)
+                if(index == -1){
+                    words.push(word)
                 }else{
-                    break
+                    words.push(`<span class="mark">${word}</span>`)
+                    indices.push(index)
+                    // if(last_index == undefined || last_index < index){
+                    //     indices.push(index)
+                    //     last_index = index
+                    // }else{
+                    //     break
+                    // }
                 }
+            }
+
+            // if(indices.length!=keyword.split(' ').length && keyword){
+            //     continue
+            // }
+
+            if(!(indices.length && keyword)){
+                continue
             }
         }
 
-        if(indices.length!=keyword.split(' ').length && keyword){
+        console.log(binded===false)
+        if(binded===false && item.keyword in this.binding){
             continue
         }
+
         let key = item.keyword.replace('_', ' ')
         let tds =''
         tds = `${tds}<td class="number">${idx}</td>`
         tds = `${tds}<td class="number">${item.supplier_competition}</td>`
         tds = `${tds}<td class="number">${item.showroom_count}</td>`
         tds = `${tds}<td class="number">${item.search_frequency}</td>`
-        tds = `${tds}<td class="keyword">${words.join(' ')}</td>`
+        tds = `${tds}<td class="keyword">${item.keyword}</td>`
         if(item.keyword in this.binding){
             tds = `${tds}<td class="main_keyword">${this.binding[item.keyword]}</td>`
         }else{

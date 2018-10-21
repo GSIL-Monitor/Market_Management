@@ -9,6 +9,7 @@ import os
 
 from libs.alibaba.alibaba import Alibaba
 from libs.alibaba.p4p import P4P
+from libs.alibaba.products_ranking import ProductsRanking
 from libs.alibaba.inquiry import Inquiry
 from libs.others.osoeco import OSOECO
 from selenium import webdriver
@@ -39,7 +40,7 @@ import threading
 app = Celery('tasks')
 app.config_from_object('conf.celeryconfig')
 
-app_data = {'alibaba': None, 'p4p':None, 'inquiry':None, 'browser': None}
+app_data = {'alibaba': None, 'p4p':None, 'inquiry':None, 'products_ranking':None,'browser': None}
 
 user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36'
 
@@ -60,6 +61,11 @@ chrome_options_headless.add_argument('--disable-extensions')
 chrome_options_headless.add_argument('--disable-logging')
 chrome_options_headless.add_argument('--disable-infobars')
 chrome_options_headless.add_argument('--ignore-certificate-errors')
+
+@app.task(bind=True, name='tasks.crawl_product_ranking')
+def crawl_product_ranking(self, keyword='', pages=5):
+    pr = get_products_ranking(current_task.request.hostname)
+    return pr.crawl_product_ranking(keyword=keyword, pages=pages)
 
 @app.task(bind=True, name='tasks.alibaba_update_product')
 def alibaba_update_product(self, data):
@@ -194,6 +200,20 @@ def get_p4p(node):
                 app_data['browser'] = app_data['p4p']
 
     return app_data['p4p']
+
+def get_products_ranking(node):
+
+    if app_data['products_ranking'] is not None:
+        return app_data['products_ranking']
+
+    text = node.split('@')[0]
+    market_name = text.split(':')[0].split('[')[0]
+    market = JSON.deserialize('.', 'storage', 'markets.json')[market_name]
+
+    pr = ProductsRanking(market=market)
+    app_data['products_ranking'] = pr
+
+    return pr
 
 def get_market():
 
