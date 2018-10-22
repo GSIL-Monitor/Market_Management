@@ -8,7 +8,6 @@ function Tab_keywords2(socket, market, categories=undefined, directory=undefined
     this.hot_searched_keywords = []
     this.keyword_groups = {}
     this.main_keywords = {}
-    this.one_words = []
     this.brands = []
     this.binding = {}
 
@@ -101,39 +100,39 @@ function Tab_keywords2(socket, market, categories=undefined, directory=undefined
         that.save()
     })
 
-    this.$content.find('#add_one_word').on('click', function(){
-        let name = $(this).parent().prev().val().trim()
-        if(!name){
-            console.log('no one_word was inputed')
-            return
-        }
-        console.log(name)
-        let $container = that.$content.find('#one_words_container')
-        $container.append(`<span class="badge badge-secondary">${name}</span>`)
-        that.one_words.push(name)
-        that.save()
-    })
-    this.$content.find('#one_words_container').on('click', 'span.badge', function(){
-        $(this).siblings('.badge-primary').removeClass('badge-primary').addClass('badge-secondary')
-        if($(this).hasClass('badge-secondary')){
-            $(this).removeClass('badge-secondary').addClass('badge-primary')
-        }
-    })
-    this.$content.find('#del_one_word').on('click', function(){
-        let $container = that.$content.find('#one_words_container')
-        let span = $container.find('span.badge-primary')
-        if(!span){
-            return
-        }
-        let ow = span.text().trim()
-        span.remove()
+    // this.$content.find('#add_one_word').on('click', function(){
+    //     let name = $(this).parent().prev().val().trim()
+    //     if(!name){
+    //         console.log('no one_word was inputed')
+    //         return
+    //     }
+    //     console.log(name)
+    //     let $container = that.$content.find('#one_words_container')
+    //     $container.append(`<span class="badge badge-secondary">${name}</span>`)
+    //     that.one_words.push(name)
+    //     that.save()
+    // })
+    // this.$content.find('#one_words_container').on('click', 'span.badge', function(){
+    //     $(this).siblings('.badge-primary').removeClass('badge-primary').addClass('badge-secondary')
+    //     if($(this).hasClass('badge-secondary')){
+    //         $(this).removeClass('badge-secondary').addClass('badge-primary')
+    //     }
+    // })
+    // this.$content.find('#del_one_word').on('click', function(){
+    //     let $container = that.$content.find('#one_words_container')
+    //     let span = $container.find('span.badge-primary')
+    //     if(!span){
+    //         return
+    //     }
+    //     let ow = span.text().trim()
+    //     span.remove()
 
-        let index = that.one_words.indexOf(ow)
-        if (index > -1) {
-            that.one_words.splice(index, 1);
-        }
-        that.save()
-    })
+    //     let index = that.one_words.indexOf(ow)
+    //     if (index > -1) {
+    //         that.one_words.splice(index, 1);
+    //     }
+    //     that.save()
+    // })
     this.$content.find('#add_brands').on('click', function(){
         let name = $(this).parent().prev().val().trim()
         if(!name){
@@ -259,14 +258,11 @@ function Tab_keywords2(socket, market, categories=undefined, directory=undefined
             
             let brands = '\\b'+that.brands.join('\\b|\\b')+'\\b'
             // let brands = that.brands.join('|')
-            console.log(brands)
+            // console.log(brands)
             for(let item of results[0]){
                 let keyword = item.keyword
                 if(keyword.search(brands) != -1){
                     continue
-                }
-                for(let ow of that.one_words){
-                    keyword = keyword.replace(ow, ow.split(' ').join('_'))
                 }
 
                 item.keyword = keyword
@@ -389,7 +385,7 @@ Tab_keywords2.prototype.load_keyword_list = function(result, keyword="", binded=
 Tab_keywords2.prototype.save = function(){
     let file = "hot_searched_keywords_sorting_out.json"
     let obj = {'keyword_groups':this.keyword_groups, 'main_keywords':this.main_keywords}
-    obj['one_words'] = this.one_words
+    // obj['one_words'] = this.one_words
     obj['brands'] = this.brands
     obj['binding'] = this.binding
     this.socket.emit('serialize', obj, this.market, [], file)
@@ -401,10 +397,10 @@ Tab_keywords2.prototype.load = function(){
     this.socket.emit('deserialize', this.market, [], file, true, function(data){
         that.keyword_groups = data.keyword_groups
         that.main_keywords = data.main_keywords
-        that.one_words = []
-        if(data.one_words){
-            that.one_words = data.one_words
-        }
+        // that.one_words = []
+        // if(data.one_words){
+        //     that.one_words = data.one_words
+        // }
         that.brands = []
         if(data.brands){
             that.brands = data.brands
@@ -422,7 +418,7 @@ Tab_keywords2.prototype.load = function(){
             }
         }
         $('#binding_main_keyword').empty().html(opts)
-
+        $('select.kws_grp').empty().html(opts)
 
         let div_groups = that.$content.find('#keywords_group_container')
         for(let group in that.keyword_groups){
@@ -430,16 +426,16 @@ Tab_keywords2.prototype.load = function(){
         }
         that.$content.find('#main_keywords_container').empty()
 
-        let div_one_words = $('#one_words_container').empty()
-        for(let ow of that.one_words){
-            div_one_words.append(`<span class="badge badge-secondary">${ow}</span>`)
-        }
+        // let div_one_words = $('#one_words_container').empty()
+        // for(let ow of that.one_words){
+        //     div_one_words.append(`<span class="badge badge-secondary">${ow}</span>`)
+        // }
         let div_brands = $('#brands_container').empty()
         for(let brand of that.brands){
             div_brands.append(`<span class="badge badge-secondary">${brand}</span>`)
         }
 
-        console.log(that.one_words,div_one_words)
+        // console.log(that.one_words,div_one_words)
     })
 }
 

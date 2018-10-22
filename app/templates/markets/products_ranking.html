@@ -1,5 +1,43 @@
 <template id="template_products_ranking">
 	<div class="products_ranking template_content">
-		<div>products_ranking</div>
+        <div class="form-group keyword_sort_out">
+            <!-- <span class="section_title"><h5>整理关键词</h5></span> -->
+            <div class="input-group float-right" style="margin-top: -15px;">
+                  <select class="custom-select kws_grp">
+                  </select>
+                  <div class="input-group-append">
+                    <button class="btn btn-primary" type="button" id='load_keywords'>load</button>
+                  </div>
+                <input type="text" class="form-control" placeholder="过滤词，空格分开" >
+                <div class="input-group-append">
+                    <button class="btn btn-primary" type="button">Filter</button>
+                    <button class="btn btn-primary" type="button">All</button>
+                    <button class="btn btn-primary" type="button">UF</button>
+                    <button class="btn btn-primary" type="button">U</button>
+                </div>
+            </div>
+            <hr>
+            <div class="">
+                <table class="table table-hover table-sm products_ranking">
+                    <thead class='thead-dark'>
+                        <tr>
+                            <th class="number" scope="col">序</th>
+                            <th class="number" scope="col">竞</th>
+                            <th class="number" scope="col">窗</th>
+                            <th class="number" scope="col">搜</th>
+                            <th class="keyword" scope="col">关键词</th>
+                            <th scope="col" colspan="36">第一页</th>
+                            <th scope="col" colspan="36">第二页</th>
+                            <th scope="col" colspan="36">第三页</th>
+                            <th scope="col" colspan="36">第四页</th>
+                            <th scope="col" colspan="36">第五页</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        
+                    </tbody>
+                </table>
+            </div>
+        </div>
 	</div>
 </template>

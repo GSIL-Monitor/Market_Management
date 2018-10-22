@@ -1,0 +1,17 @@
+table.products_ranking tbody{
+    font-size: smaller;
+}
+table.products_ranking td.page_even{
+    background-color: aliceblue;
+}
+table.products_ranking td.number{
+    width:33px;
+}
+
+table.products_ranking td.keyword{
+    width:150px;
+}
+
+table.products_ranking td.place_holder{
+    min-width: 3px;
+}

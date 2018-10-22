@@ -14,7 +14,14 @@ Tabs.prototype.init = function($container){
     this.$root.find('.card-header-tabs').on('click', 'li', function(){
 
         let name = $(this).data('name')
-
+        console.log(name)
+        if(name == 'products_ranking'){
+            $('#left').hide()
+            $('#right').hide()
+        }else{
+            $('#left').show()
+            $('#right').show()
+        }
         $(this).find('a').addClass('active')
         $(this).siblings().find('a').removeClass('active')
 
