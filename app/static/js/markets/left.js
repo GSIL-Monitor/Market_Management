@@ -3,6 +3,7 @@ import {Tab_attributes} from './tab_attributes.js'
 import {Tab_template} from './tab_template.js'
 import {Tab_keywords} from './tab_keywords.js'
 import {Tab_keywords2} from './tab_keywords2.js'
+import {Tab_products_ranking} from './tab_products_ranking.js'
 import {Tab_market_others} from './tab_market_others.js'
 import {Tab_pictures} from './tab_pictures.js'
 import {Tab_products} from './tab_products.js'
@@ -44,6 +45,7 @@ function init(data){
         tabs.append_tab(new Tab_template(socket, market))
         tabs.append_tab(new Tab_keywords(socket, market))
         tabs.append_tab(new Tab_keywords2(socket, market))
+        tabs.append_tab(new Tab_products_ranking(socket, market))
         tabs.append_tab(new Tab_pictures(socket, market))
         tabs.append_tab(new Tab_update(socket, market))
         tabs.append_tab(new Tab_market_others(socket, market))
