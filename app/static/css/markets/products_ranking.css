@@ -14,4 +14,13 @@ table.products_ranking td.keyword{
 
 table.products_ranking td.place_holder{
     min-width: 3px;
+    padding: 0px;
+    border: 1px solid lightgrey;
+}
+
+select.kws_grp{
+    max-width: 220px
+}
+select.suppliers{
+    max-width: 300px
 }

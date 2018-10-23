@@ -158,6 +158,25 @@ from libs.crawlers.keywords_crawler_amazon import KwclrAmazon
 #
 #         tasks.append(task)
 #     return tasks
+
+@socketio.on('get_products_rankings', namespace='/markets')
+def get_products_rankings(market, keywords):
+
+    root = market['directory']+'_config'
+    products_rankings_dir = root+'//'+'products_ranking'
+
+    products_rankings = []
+    for kw in keywords:
+        file = products_rankings_dir + '//' + kw + '.json'
+
+        if not os.path.isfile(file):
+            continue
+
+        obj = JSON.deserialize(root, 'products_ranking', file)
+        obj['keyword'] = kw
+        products_rankings.append(obj)
+    return products_rankings
+
 @socketio.on('get_visitors', namespace='/markets')
 def get_visitors(market, start_date='2018-08-01', end_date=None):
 

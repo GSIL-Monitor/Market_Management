@@ -2,21 +2,21 @@
 	<div class="products_ranking template_content">
         <div class="form-group keyword_sort_out">
             <!-- <span class="section_title"><h5>整理关键词</h5></span> -->
-            <div class="input-group float-right" style="margin-top: -15px;">
-                  <select class="custom-select kws_grp">
-                  </select>
-                  <div class="input-group-append">
-                    <button class="btn btn-primary" type="button" id='load_keywords'>load</button>
-                  </div>
-                <input type="text" class="form-control" placeholder="过滤词，空格分开" >
+            <div class="input-group float-right" style="margin-top: 5px;">
+                <select class="custom-select kws_grp">
+                </select>
                 <div class="input-group-append">
-                    <button class="btn btn-primary" type="button">Filter</button>
-                    <button class="btn btn-primary" type="button">All</button>
-                    <button class="btn btn-primary" type="button">UF</button>
-                    <button class="btn btn-primary" type="button">U</button>
+                    <button class="btn btn-primary" type="button" id='load_keywords'>Load</button>
+                    <button class="btn btn-primary" type="button" id='reset_keywords'>Reset</button>
+                </div>
+                <select class="custom-select suppliers">
+                </select>
+                <!-- <input type="text" class="form-control" placeholder="过滤词，空格分开" > -->
+                <div class="input-group-append">
+                    <button class="btn btn-primary" type="button" id="load_supplier">Load</button>
                 </div>
             </div>
-            <hr>
+            <!-- <hr> -->
             <div class="">
                 <table class="table table-hover table-sm products_ranking">
                     <thead class='thead-dark'>
