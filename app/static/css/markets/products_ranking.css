@@ -1,5 +1,23 @@
 table.products_ranking tbody{
     font-size: smaller;
+
+   -moz-user-select: -moz-none;
+   -khtml-user-select: none;
+   -webkit-user-select: none;
+
+   /*
+     Introduced in IE 10.
+     See http://ie.microsoft.com/testdrive/HTML5/msUserSelect/
+   */
+   -ms-user-select: none;
+   user-select: none;
+}
+table.products_ranking tbody tr.selected td.keyword{
+    background-color: black;
+    color:white;
+}
+table.products_ranking td{
+    cursor: pointer;
 }
 table.products_ranking td.page_even{
     background-color: aliceblue;
@@ -7,7 +25,9 @@ table.products_ranking td.page_even{
 table.products_ranking td.number{
     width:33px;
 }
-
+table.products_ranking tr.has_ranking td.number{
+    background-color: lightgrey;
+}
 table.products_ranking td.keyword{
     width:150px;
 }
@@ -24,3 +44,4 @@ select.kws_grp{
 select.suppliers{
     max-width: 300px
 }
+

@@ -6,6 +6,7 @@ from .. import socketio
 # from .. import schedule_task
 # from .. import get_p4p
 
+from libs.CeleryTasks import tasks
 from datetime import datetime
 from libs.json import JSON
 import os
@@ -26,138 +27,54 @@ from libs.crawlers.keywords_crawler_ali_sp import KwclrAliSp
 from libs.crawlers.keywords_crawler_amazon import KwclrAmazon
 
 
-# @socketio.on('add_task', namespace='/markets')
-# def add_task(market, task):
-#     return schedule_task(market, task)
-#     # tasks = []
-#     # p4p = get_p4p(market, socketio, request.sid)
-#     # kwargs = {'group': task['group'], 'socketio': socketio, 'tasks': all_tasks}
-#     # if task['type'] == 'recording':
-#     #     task_id = find_next_task_id(task_type='recording')
-#     #     kwargs['tid'] = task_id
-#     #     job = scheduler._scheduler.add_job(p4p.crawl, id=task_id, trigger='interval', kwargs=kwargs, minutes=int(task['interval']), start_date=task['start_date'], end_date=task['end_date'])
-#     #     all_tasks[task_id] = {'job': job, 'is_last_run': False, 'is_running': False}
-#     #     # job.modify(next_run_time=datetime.now())
-#     #     obj = Task(job).__dict__
-#     #     obj['is_last_run'] = False
-#     #     obj['is_running'] = False
-#     #     tasks.append(obj)
-#     # elif task['type'] == 'monitor':
-#     #     task_id = find_next_task_id(task_type='recording')
-#     #     kwargs['tid'] = task_id
-#     #     start_date = arrow.get(task['start_date'], 'YYYY-MM-DD HH:mm:ss')
-#     #     start = start_date.shift(minutes=-3)
-#     #     end_date = arrow.get(task['end_date'], 'YYYY-MM-DD HH:mm:ss')
-#     #     end = end_date.shift(minutes=3)
-#     #     job = scheduler._scheduler.add_job(p4p.crawl, id=task_id, trigger='interval', kwargs=kwargs, minutes=int(task['interval']), start_date=start.format('YYYY-MM-DD HH:mm:ss'), end_date=end.format('YYYY-MM-DD HH:mm:ss'))
-#     #     all_tasks[task_id] = {'job': job, 'is_last_run': False, 'is_running': False}
-#     #     # job.modify(next_run_time=datetime.now())
-#     #     obj = Task(job).__dict__
-#     #     obj['is_last_run'] = False
-#     #     obj['is_running'] = False
-#     #     tasks.append(obj)
-#     #
-#     #     task_id = find_next_task_id(task_type='monitor')
-#     #     kwargs['tid'] = task_id
-#     #     job = scheduler._scheduler.add_job(p4p.monitor, id=task_id, trigger='interval', kwargs=kwargs, minutes=int(task['interval']), start_date=task['start_date'], end_date=task['end_date'])
-#     #     all_tasks[task_id] = {'job': job, 'is_last_run': False, 'is_running': False}
-#     #     # job.modify(next_run_time=datetime.now())
-#     #     obj = Task(job).__dict__
-#     #     obj['is_last_run'] = False
-#     #     obj['is_running'] = False
-#     #     tasks.append(obj)
-#     #
-#     #     task_id = find_next_task_id(task_type='monitor')
-#     #     kwargs['tid'] = task_id
-#     #     run_date = arrow.get(task['end_date'], 'YYYY-MM-DD HH:mm:ss')
-#     #     run_date = run_date.shift(minutes=2)
-#     #     job = scheduler._scheduler.add_job(p4p.turn_all_off, id=task_id, trigger='date', kwargs=kwargs, run_date=run_date.format('YYYY-MM-DD HH:mm:ss'))
-#     #     all_tasks[task_id] = {'job': job, 'is_last_run': False, 'is_running': False}
-#     #     obj = Task(job).__dict__
-#     #     obj['is_last_run'] = False
-#     #     obj['is_running'] = False
-#     #     tasks.append(obj)
-#     # return tasks
-#
-# #
-# # def find_next_task_id(task_type='recording'):
-# #     max_tid = 0
-# #     # jobs = scheduler.get_jobs()
-# #     for id in all_tasks:
-# #         text = id
-# #         if task_type in text:
-# #             tid = int(text.split('_')[1])
-# #             if tid > max_tid:
-# #                 max_tid = tid
-# #     max_tid += 1
-# #     return task_type + '_' + str(max_tid)
-# #
-# #
-# # def get_p4p(market, socketio, room):
-# #     if market['name'] in p4ps:
-# #         return p4ps[market['name']]
-# #     else:
-# #         p4p = P4P(market, market['lid'], market['lpwd'], socketio, '/markets', room)
-# #         p4ps[market['name']] = p4p
-# #         return p4p
-#
-#
-# @socketio.on('pause_task', namespace='/markets')
-# def pause_task(task_id):
-#     if task_id not in all_tasks:
-#         return
-#     if all_tasks[task_id]['is_last_run']:
-#         return
-#     scheduler.pause_job(task_id)
-#     job = scheduler.get_job(task_id)
-#     socketio.emit('event_task_paused', Task(job).__dict__, namespace='/markets', broadcast=True)
-#
-#
-# @socketio.on('resume_task', namespace='/markets')
-# def resume_task(task_id):
-#     if task_id not in all_tasks:
-#         return
-#     if all_tasks[task_id]['is_last_run']:
-#         return
-#     scheduler.resume_job(task_id)
-#     job = scheduler.get_job(task_id)
-#     socketio.emit('event_task_resumed', Task(job).__dict__, namespace='/markets', broadcast=True)
-#     job.modify(next_run_time=datetime.now())
-#
-#
-# @socketio.on('remove_task', namespace='/markets')
-# def remove_task(task_id):
-#     if task_id not in all_tasks:
-#         return
-#
-#     del all_tasks[task_id]
-#     job = scheduler.get_job(task_id)
-#     if job:
-#         job.remove()
-#
-#
-# @socketio.on('get_all_tasks', namespace='/markets')
-# def get_all_tasks(market):
-#     tasks = []
-#     print(all_tasks)
-#     for tid in all_tasks:
-#         t = all_tasks[tid]
-#         job = t['job']
-#
-#         if hasattr(job.func, '__self__'):
-#             mkt = job.func.__self__.market
-#
-#         if mkt['name'] != market['name']:
-#             continue
-#
-#         task = Task(job).__dict__
-#         task['is_running'] = t['is_running']
-#         task['is_last_run'] = t['is_last_run']
-#         if t['is_running']:
-#             task['progress'] = t['progress']
-#
-#         tasks.append(task)
-#     return tasks
+@socketio.on('crawl_products_rankings', namespace='/markets')
+def crawl_products_rankings(market, keywords):
+    socketio.start_background_task(background_task_crawl_products_rankings, keywords, 3, socketio, '/markets', request.sid)
+
+def background_task_crawl_products_rankings(kws, max_processes, socketio, ns, room):
+    processes_count = 0
+    records = []
+    results = {}
+    idx_kws = -1
+    while True:
+        while processes_count < max_processes and (idx_kws+1) < len(kws):
+            idx_kws +=1
+            kw = kws[idx_kws]
+            kwargs={'keyword': kw, 'pages': 5}
+            result = tasks.crawl_product_ranking.apply_async(kwargs=kwargs, queue='eyelash_products_ranking')
+            results[kw] = result
+            processes_count += 1
+            
+            print(kw, end=',')
+
+        print()
+        print('--------------')
+
+        if processes_count == 0:
+            break
+
+        new_records = []
+        finished_kws = []
+        while True:
+            for kw in results:
+                result = results[kw]
+                if result.ready():
+                    record = result.get()
+                    record['keyword'] = kw
+                    new_records.append(record)
+                    records.append(record)
+                    finished_kws.append(kw)
+                    processes_count -= 1
+                    
+            for kw in finished_kws:
+                results.pop(kw)
+            if new_records:
+                print('finished:', len(new_records), finished_kws)
+                socketio.emit('crawl_products_rankings_finished_kws', finished_kws, namespace=ns, room=room)
+                break
+            else:
+                time.sleep(1)
+    socketio.emit('crawl_products_rankings_results', records, namespace=ns, room=room)
 
 @socketio.on('get_products_rankings', namespace='/markets')
 def get_products_rankings(market, keywords):
@@ -503,16 +420,13 @@ def update_products(objects):
     alibaba.room = request.sid
     socketio.start_background_task(background_update_products, alibaba, objects)
 
-
 def background_update_products(alibaba, objects):
     for idx, obj in enumerate(objects):
         alibaba.update_product(obj)
 
-
 @socketio.on('crawl_keywords', namespace='/markets')
 def crawl_keywords(keyword, website, page_quantity, market):
     socketio.start_background_task(backgound_crawling_keywords, keyword, website, page_quantity, request.sid, socketio, market)
-
 
 def backgound_crawling_keywords(keyword, website, page_quantity, sid, socketio, market):
     filename = 'keywords.json'
@@ -569,7 +483,6 @@ def backgound_crawling_keywords(keyword, website, page_quantity, sid, socketio, 
 @socketio.on('refresh_p4p_keywords', namespace='/markets')
 def refresh_p4p_keywords(market):
     socketio.start_background_task(background_task_refresh_p4p_keywords, market, socketio, '/markets', request.sid)
-
 
 def background_task_refresh_p4p_keywords(market, socketio, ns, room):
     p4p = get_p4p(market, socketio, room)

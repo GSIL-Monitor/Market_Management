@@ -13,12 +13,15 @@ function Tab_products_ranking(socket, market, categories=undefined, directory=un
     this.color_idx = 0
 
     this.load_keyword_groups()
-    let buttons = `<button type="button" class="btn btn-sm btn-primary">保 存</button>`
+    let buttons = `<button type="button" class="btn btn-sm btn-primary update_rankings">更新</button>`
     // let buttons = ``
     this.$button_group = $(`<div class="btn-group mr-2 products_ranking" role="group">${buttons}</div>`)
 
     this.$content = fw.load_from_template('#template_products_ranking')
 
+    this.shift_pressed = false
+    this.shift_idx = undefined
+    this.shift_selection = []
     let that = this
 
     this.$content.find('#load_supplier').on('click', function(){
@@ -35,12 +38,74 @@ function Tab_products_ranking(socket, market, categories=undefined, directory=un
             that.shift_pressed = false
         }
         if(e.key == 'Escape'){
+            that.shift_idx = undefined
+            that.shift_pressed = false
             that.$content.find('td.place_holder').attr('style', '')
             that.$content.find('td.glittereyelash').attr('style', 'background-color: #000000;border:1px solid #000000;')
+            that.$content.find('table tr.selected').removeClass('selected')
         }
     })
 
+    $('body').on("keydown", function(e){
+        console.log('keyup: ', e.key);
+        if(e.key == 'Shift'){
+            that.shift_pressed = true
+        }
+    })
+
+    this.$button_group.find('.update_rankings').click(function(){
+    	let kws = []
+    	for(let tr of that.$content.find('table.products_ranking tr.selected')){
+    		kws.push($(tr).data('word'))
+    	}
+    	that.socket.emit('crawl_products_rankings', this.market, kws)
+    })
+
+	this.$content.find('table.products_ranking tbody').on('click', 'tr', function(){
+		console.log(that.shift_pressed, $(this).index())
+		let $tbody = that.$content.find('table.products_ranking tbody')
+		let $tr = $(this)
+		let idx = $tr.index()
+		if(that.shift_pressed){
+			if(that.shift_idx==undefined){
+				that.shift_idx = idx
+				$tr.addClass('selected')
+			}else{
+				for(let $e of that.shift_selection){
+					$e.removeClass('selected')
+				}
+				that.shift_selection = []
+
+				let step = 1
+				if(idx>that.shift_idx){
+					step = -1
+				}
+
+				do{
+					if(idx==that.shift_idx){
+						break
+					}
+
+					$tr.addClass('selected')
+					that.shift_selection.push($tr)
+					idx = idx + step
+					console.log(`tr:nth-child(${idx+1})`)
+					$tr = $tbody.find(`tr:nth-child(${idx+1})`)
+					
+				}while(true)
+			}
+		}else{
+			$tr.toggleClass('selected')
+			if($tr.hasClass('selected')){
+				that.shift_idx = idx
+			}
+		}
+	})    
+
     this.$content.find('table.products_ranking tbody').on('click', 'td.place_holder', function(){
+    	if(that.shift_pressed){
+    		return
+    	}
         let key = $(this).data('supplier')
         console.log(key)
         that.$content.find('select.suppliers').val(key)
@@ -48,6 +113,20 @@ function Tab_products_ranking(socket, market, categories=undefined, directory=un
 
     this.$content.find('#load_keywords').on('click', function(){
         that.load_keywords($('select.kws_grp').val())
+    })
+
+    this.socket.on('crawl_products_rankings_finished_kws', function(kws){
+    	let $tbody = that.$content.find('table.products_ranking tbody')
+    	for(let kw of kws){
+    		let cls = kw.split(' ').join('_')
+    		console.log(cls)
+    		let $tr = $tbody.find(`tr.${cls}`)
+    		$tr.removeClass('selected')
+    	}
+    })
+
+    this.socket.on('crawl_products_rankings_results', function(records){
+    	that.load_products_rankings(records)
     })
 
     this.fetch_values_from_server()
@@ -127,50 +206,69 @@ Tab_products_ranking.prototype.load_supplier = function(supplier, color){
 Tab_products_ranking.prototype.load_suppliers = function(kws){
     let that = this
     this.socket.emit('get_products_rankings', this.market, kws, function(data){
-        // that.products_rankings = data
-        for(let item of data){
-            let keyword = item['keyword']
-            let datetime = new Date(item['datetime'])
-            let records = item['records']
-
-            for(let record of records){
-                let key = record['company']['href'].match(/\/\/([^\.]*)\./)[1]
-                let company = undefined
-                if(key in that.products_rankings){
-                    company = that.products_rankings[key]
-                }else{
-                    company = {}
-                    company['id'] = key
-                    company['occurrences'] = 0
-                    company['company'] = record.company
-                    that.products_rankings[key] = company
-                }
-
-                if(!(keyword in company)){
-                    company[keyword] = []
-                }
-
-                company[keyword].push(record)
-                company['occurrences'] ++
-            }
-        }
-
-        let rankings = []
-        for(let [key, value] of Object.entries(that.products_rankings)){
-            rankings.push(value)
-        }
-
-        rankings.sort((a,b)=>{return b['occurrences']-a['occurrences']})
-
-        let opts = ''
-        for(let ranking of rankings){
-            opts = `${opts}<option value="${ranking.id}">${ranking.occurrences + ' - ' + ranking.company.name}</option>`
-        }
-        that.$content.find('select.suppliers').html(opts)
-        
-        let supplier = that.products_rankings['glittereyelash']
-        that.load_supplier(supplier, '#000000')
+        that.load_products_rankings(data)
     })
+}
+
+Tab_products_ranking.prototype.crawl_products_rankings = function(kws){
+    let that = this
+    this.socket.emit('crawl_products_rankings', this.market, kws, function(data){
+        that.crawl_products_rankings(data)
+    })
+}
+
+Tab_products_ranking.prototype.load_products_rankings = function(data){
+        // this.products_rankings = data
+    let $tbody = this.$content.find('table.products_ranking tbody')
+    for(let item of data){
+        let keyword = item['keyword']
+        let datetime = new Date(item['datetime'])
+        let records = item['records']
+console.log(keyword.split(' ').join('_'))
+        let $tr = $tbody.find(`tr.${keyword.split(' ').join('_')}`)
+        $tr.addClass('has_ranking')
+
+        for(let record of records){
+        	// console.log(record['company']['href'])
+        	if(!record['company']['href']){
+        		continue
+        	}
+            let key = record['company']['href'].match(/\/\/([^\.]*)\./)[1]
+            let company = undefined
+            if(key in this.products_rankings){
+                company = this.products_rankings[key]
+            }else{
+                company = {}
+                company['id'] = key
+                company['occurrences'] = 0
+                company['company'] = record.company
+                this.products_rankings[key] = company
+            }
+
+            if(!(keyword in company)){
+                company[keyword] = []
+            }
+
+            company[keyword].push(record)
+            company['occurrences'] ++
+        }
+    }
+
+    let rankings = []
+    for(let [key, value] of Object.entries(this.products_rankings)){
+        rankings.push(value)
+    }
+
+    rankings.sort((a,b)=>{return b['occurrences']-a['occurrences']})
+
+    let opts = ''
+    for(let ranking of rankings){
+        opts = `${opts}<option value="${ranking.id}">${ranking.occurrences + ' - ' + ranking.company.name}</option>`
+    }
+    this.$content.find('select.suppliers').html(opts)
+    
+    let supplier = this.products_rankings['glittereyelash']
+    this.load_supplier(supplier, '#000000')
 }
 
 Tab_products_ranking.prototype.load_keyword_groups = function(){
