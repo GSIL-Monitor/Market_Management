@@ -29,7 +29,7 @@ from libs.crawlers.keywords_crawler_amazon import KwclrAmazon
 
 @socketio.on('crawl_products_rankings', namespace='/markets')
 def crawl_products_rankings(market, keywords):
-    socketio.start_background_task(background_task_crawl_products_rankings, keywords, 3, socketio, '/markets', request.sid)
+    socketio.start_background_task(background_task_crawl_products_rankings, keywords, 1, socketio, '/markets', request.sid)
 
 def background_task_crawl_products_rankings(kws, max_processes, socketio, ns, room):
     processes_count = 0

@@ -108,7 +108,10 @@ function Tab_products_ranking(socket, market, categories=undefined, directory=un
     	}
         let key = $(this).data('supplier')
         console.log(key)
-        that.$content.find('select.suppliers').val(key)
+        that.$content.find('select.suppliers').val(key).selectpicker('refresh')
+
+        let record = $(this).data('record')
+        console.log(record)
     })
 
     this.$content.find('#load_keywords').on('click', function(){
@@ -118,7 +121,10 @@ function Tab_products_ranking(socket, market, categories=undefined, directory=un
     this.socket.on('crawl_products_rankings_finished_kws', function(kws){
     	let $tbody = that.$content.find('table.products_ranking tbody')
     	for(let kw of kws){
-    		let cls = kw.split(' ').join('_')
+    		// let cls = kw.split(' ').join('_')
+            let cls = kw.replace(/ /g, '-space-')
+            cls = cls.replace(/%/g, '-percent-')
+            cls = cls.replace(/\./g, '-point-')
     		console.log(cls)
     		let $tr = $tbody.find(`tr.${cls}`)
     		$tr.removeClass('selected')
@@ -150,6 +156,7 @@ Tab_products_ranking.prototype.load_keywords = function(grp){
         }
         
         let key = item.keyword
+
         if(!(key in this.products_rankings)){
             kws.push(key)
         }
@@ -172,7 +179,12 @@ Tab_products_ranking.prototype.load_keywords = function(grp){
             }
         }
 
-        trs = `${trs}<tr class="${key.split(' ').join('_')}" data-word="${key}">${tds}</tr>`
+
+        let cls = key.replace(/ /g, '-space-')
+        cls = cls.replace(/%/g, '-percent-')
+        cls = cls.replace(/\./g, '-point-')
+
+        trs = `${trs}<tr class="${cls}" data-word="${key}">${tds}</tr>`
         idx ++
     }
     tbody.empty().append(trs)
@@ -187,7 +199,12 @@ Tab_products_ranking.prototype.load_supplier = function(supplier, color){
         if(kw=='company' || kw=='id' || kw=='occurrences'){
             continue
         }
-        let cls = kw.split(' ').join('_')
+        // let cls = kw.split(' ').join('_')
+
+        let cls = kw.replace(/ /g, '-space-')
+        cls = cls.replace(/%/g, '-percent-')
+        cls = cls.replace(/\./g, '-point-')
+
         let $tr = $tbody.find(`tr.${cls}`)
         if($tr.length==0){
             continue
@@ -196,7 +213,11 @@ Tab_products_ranking.prototype.load_supplier = function(supplier, color){
         for(let record of supplier[kw]){
             let loc = record.location
             let idx_td = (loc.page-1)*36+loc.position+5
-            $tr.find(`td:nth-child(${idx_td})`).addClass(supplier.id).attr('style', style).attr('data-supplier', supplier.id)
+            $tr.find(`td:nth-child(${idx_td})`)
+                .addClass(supplier.id)
+                .attr('style', style)
+                .attr('data-supplier', supplier.id)
+                .data('record', record)
         }
         
     }
@@ -224,15 +245,20 @@ Tab_products_ranking.prototype.load_products_rankings = function(data){
         let keyword = item['keyword']
         let datetime = new Date(item['datetime'])
         let records = item['records']
-console.log(keyword.split(' ').join('_'))
-        let $tr = $tbody.find(`tr.${keyword.split(' ').join('_')}`)
+
+        let cls = keyword.replace(/ /g, '-space-')
+        cls = cls.replace(/%/g, '-percent-')
+        cls = cls.replace(/\./g, '-point-')
+    
+        let $tr = $tbody.find(`tr.${cls}`)
         $tr.addClass('has_ranking')
 
         for(let record of records){
-        	// console.log(record['company']['href'])
         	if(!record['company']['href']){
+                console.log(keyword, record)
         		continue
         	}
+            // console.log(keyword, record)
             let key = record['company']['href'].match(/\/\/([^\.]*)\./)[1]
             let company = undefined
             if(key in this.products_rankings){
@@ -266,6 +292,7 @@ console.log(keyword.split(' ').join('_'))
         opts = `${opts}<option value="${ranking.id}">${ranking.occurrences + ' - ' + ranking.company.name}</option>`
     }
     this.$content.find('select.suppliers').html(opts)
+    this.$content.find('select.suppliers').selectpicker('refresh')
     
     let supplier = this.products_rankings['glittereyelash']
     this.load_supplier(supplier, '#000000')
