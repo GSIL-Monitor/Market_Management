@@ -39,4 +39,4 @@ start-process celery -ArgumentList "beat -A libs.CeleryTasks.schedule -l info --
 start-process flower -ArgumentList "--port=5555 --broker=redis://localhost:6379/0 --broker_api=redis://localhost:6379/0"
 
 
-#start-process celery -ArgumentList "worker -A libs.CeleryTasks.tasks -c 3 -l info -Q eyelash_products_ranking,celery --purge -n Eyelashes[products_ranking]@localhost"
+#start-process celery -ArgumentList "worker -A libs.CeleryTasks.tasks -c 1 -l info -Q eyelash_products_ranking,celery --purge -n Eyelashes[products_ranking]@localhost"
