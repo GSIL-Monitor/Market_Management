@@ -113,14 +113,17 @@ function Tab_products_ranking(socket, market, categories=undefined, directory=un
         let record = $(this).data('record')
         console.log(record)
         let $div = that.$content.find('div.record_info')
-        let buttons = `<button type="button" class="btn btn-link" data-href="${record.company.href}">Company</button>`
+        let buttons = `<button type="button" class="btn btn-link" data-href="">${record.location.position}</button>`
+        buttons = `${buttons}<button type="button" class="btn btn-link" data-href="${record.company.href}">Company</button>`
         buttons = `${buttons}<button type="button" class="btn btn-link" data-href="${record.product.href}">${record.product.id}</button>`
         $div.html(buttons)
     })
 
     this.$content.find('div.record_info').on('click', 'button', function(){
         let href = $(this).data('href')
-        window.open(href, '_blank');
+        if(href){
+        	window.open(href, '_blank');
+        }
     })
 
     this.$content.find('#load_keywords').on('click', function(){
