@@ -37,6 +37,10 @@ table.products_ranking td.place_holder{
     padding: 0px;
     border: 1px solid lightgrey;
 }
+table.products_ranking td.place_holder.selected{
+    /*box-shadow: 10px 10px 5px grey;*/
+    border: 3px dashed red !important;
+}
 
 select.kws_grp{
     max-width: 220px

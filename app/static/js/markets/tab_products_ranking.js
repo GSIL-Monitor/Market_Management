@@ -64,7 +64,7 @@ function Tab_products_ranking(socket, market, categories=undefined, directory=un
 	this.$content.find('table.products_ranking tbody').on('click', 'td.keyword', function(){
 		console.log(that.shift_pressed, $(this).index())
 		let $tbody = that.$content.find('table.products_ranking tbody')
-		let $tr = $(this)
+		let $tr = $(this).parent()
 		let idx = $tr.index()
 		if(that.shift_pressed){
 			if(that.shift_idx==undefined){
@@ -103,14 +103,24 @@ function Tab_products_ranking(socket, market, categories=undefined, directory=un
 	})    
 
     this.$content.find('table.products_ranking tbody').on('click', 'td.place_holder', function(){
-    	if(that.shift_pressed){
-    		return
-    	}
         let key = $(this).data('supplier')
+        if(!key){
+            return
+        }
+
+        let record = $(this).data('record')
+
+        // if(!that.shift_pressed){
+        //     $('td.place_holder.selected').removeClass('selected')
+        // }
+
+        // $(`td.place_holder._${record.product.id}`).addClass('selected')
+
+        $(`td.place_holder._${record.product.id}`).toggleClass('selected')
+
         console.log(key)
         that.$content.find('select.suppliers').val(key).selectpicker('refresh')
 
-        let record = $(this).data('record')
         console.log(record)
         let $div = that.$content.find('div.record_info')
         let buttons = `<button type="button" class="btn btn-link" data-href="">${record.location.position}</button>`
@@ -227,6 +237,7 @@ Tab_products_ranking.prototype.load_supplier = function(supplier, color){
             let idx_td = (loc.page-1)*36+loc.position+5
             $tr.find(`td:nth-child(${idx_td})`)
                 .addClass(supplier.id)
+                .addClass(`_${record.product.id}`)
                 .attr('style', style)
                 .attr('data-supplier', supplier.id)
                 .data('record', record)

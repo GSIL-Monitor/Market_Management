@@ -4,7 +4,7 @@ function Tab_keywords2(socket, market, categories=undefined, directory=undefined
     Tab.call(this, socket, market, categories, directory, filename)
     
     this.name = 'keywords2'
-    this.title = '关键词2'
+    this.title = '热搜词'
     this.hot_searched_keywords = []
     this.keyword_groups = {}
     this.main_keywords = {}
