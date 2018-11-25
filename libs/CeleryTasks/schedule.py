@@ -45,24 +45,24 @@ app.conf.beat_schedule = {
         'options': {'queue': 'Eyelashes_p4p_1'}
     },
 
-    # 'Eyelashes_p4p_check_15': {                                          # 直通车高消费词
-    #     'task': 'tasks.p4p_check',
-    #     'schedule': crontab(minute=minutes_30_60_2, hour='21'),
-    #     'kwargs': {'group': '直通车高消费词'},
-    #     'options': {'queue': 'Eyelashes_p4p_2'}
-    # },
-    # 'Eyelashes_p4p_check_16': {                                          # 直通车高消费词
-    #     'task': 'tasks.p4p_check',
-    #     'schedule': crontab(minute=minutes_0_60_2_1, hour='0-5,22,23'),
-    #     'kwargs': {'group': '直通车高消费词'},
-    #     'options': {'queue': 'Eyelashes_p4p_2'}
-    # },
-    # 'Eyelashes_p4p_turn_all_off_17': {                                   # 直通车高消费词
-    #     'task': 'tasks.p4p_turn_all_off',
-    #     'schedule': crontab(minute='4', hour='6'),
-    #     'kwargs': {'group': '直通车高消费词'},
-    #     'options': {'queue': 'Eyelashes_p4p_2'}
-    # },
+    'Eyelashes_p4p_check_15': {                                          # 直通车高消费词
+        'task': 'tasks.p4p_check',
+        'schedule': crontab(minute=minutes_30_60_2, hour='21'),
+        'kwargs': {'group': '直通车高消费词'},
+        'options': {'queue': 'Eyelashes_p4p_2'}
+    },
+    'Eyelashes_p4p_check_16': {                                          # 直通车高消费词
+        'task': 'tasks.p4p_check',
+        'schedule': crontab(minute=minutes_0_60_2_1, hour='0-5,22,23'),
+        'kwargs': {'group': '直通车高消费词'},
+        'options': {'queue': 'Eyelashes_p4p_2'}
+    },
+    'Eyelashes_p4p_turn_all_off_17': {                                   # 直通车高消费词
+        'task': 'tasks.p4p_turn_all_off',
+        'schedule': crontab(minute='4', hour='6'),
+        'kwargs': {'group': '直通车高消费词'},
+        'options': {'queue': 'Eyelashes_p4p_2'}
+    },
 
     # 'Eyelashes_inquiry_check': {
     #     'task': 'tasks.inquiry_check',
@@ -117,9 +117,9 @@ app.conf.beat_schedule = {
     #     'schedule': crontab(minute='57', hour='14'),
     #     'options': {'queue': 'celery'}
     # },
-    'OSOECO_checkin': {
-        'task': 'tasks.osoeco_checkin',
-        'schedule': crontab(minute='23', hour='9'),
-        'options': {'queue': 'celery'}
-    }
+    # 'OSOECO_checkin': {
+    #     'task': 'tasks.osoeco_checkin',
+    #     'schedule': crontab(minute='23', hour='9'),
+    #     'options': {'queue': 'celery'}
+    # }
 }

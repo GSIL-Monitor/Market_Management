@@ -22,7 +22,7 @@ $env:FORKED_BY_MULTIPROCESSING=1
 #start-process flower -WindowStyle Hidden -ArgumentList "--port=5555 --broker=redis://localhost:6379/0 --broker_api=redis://localhost:6379/0"
 
 start-process celery -ArgumentList "worker -A libs.CeleryTasks.tasks -c 1 -l info -Q Eyelashes_p4p_1,celery --purge -n Eyelashes[p4p_1]@localhost"
-#start-process celery -ArgumentList "worker -A libs.CeleryTasks.tasks -c 1 -l info -Q Eyelashes_p4p_2,celery --purge -n Eyelashes[p4p_2]@localhost"
+start-process celery -ArgumentList "worker -A libs.CeleryTasks.tasks -c 1 -l info -Q Eyelashes_p4p_2,celery --purge -n Eyelashes[p4p_2]@localhost"
 
 #start-process celery -ArgumentList "worker -A libs.CeleryTasks.tasks -c 1 -l info -Q Tools_p4p,celery --purge -n Tools[p4p]@localhost"
 #start-process celery -ArgumentList "worker -A libs.CeleryTasks.tasks -c 1 -l info -Q Eyelashes_inquiry,celery --purge -n Eyelashes[inquiry]@localhost"

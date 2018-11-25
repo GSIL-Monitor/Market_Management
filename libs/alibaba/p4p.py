@@ -440,7 +440,8 @@ class P4P():
                                re.M | re.DOTALL)
 
                 result = re.sub(',[\n\t ]*}', '}',result.group(1))
-                result = re.sub('"" === "true"', '"\\"\\" === \\"true\\""', result)
+                # result = re.sub('"" === "true"', '"\\"\\" === \\"true\\""', result)
+                result = re.sub(' === "true"', '', result)
 
                 break
 
