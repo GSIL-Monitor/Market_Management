@@ -819,7 +819,10 @@ class Alibaba:
     #                     print(pq_item.find('.product-model').text())
                         product['href'] = pq_a.attr('href')
                         product['title'] = pq_a.text().strip().lower()
-                        product['pid'] = pq_item.find('.product-model').text().split(':')[1].strip()
+                        if pq_item.find('.product-model'):
+                            product['pid'] = pq_item.find('.product-model').text().split(':')[1].strip()
+                        else:
+                            product['pid'] = ''
                         product['category'] = pq_item.find('.group-name').text().split(':')[1].strip()
                         product['update'] = pq_item.find('.next-col:nth-child(5) span').text().strip()
                         product['price'] = pq_item.find('.next-col:nth-child(3)').text().strip()
