@@ -36,7 +36,7 @@ class Email:
 
     @classmethod
     def message_of_product_catalog(cls, market, account, buyer):
-        catalog_href = "https://drive.google.com/open?id=121x1B5cZzfDQ78FRW2QHvZJdVlLibTt8"
+        catalog_href = "https://drive.google.com/open?id=1k4FpNqe9Klg0lQt77iNRdBDKGuaWtelv"
         file = market['directory'] + '_config//templates//email_template_product_catalog.html'
         with open(file, 'r') as f:
             text = f.read()
@@ -44,5 +44,5 @@ class Email:
         params = {'buyer': buyer, 'sender': account['lname'], 'catalog_href':catalog_href, 'homepage': market['homepage'], 'email': account['lid'], 'whatsapp': account['mobile']}
         content = t.substitute(params)
         msg = MIMEText(content, 'html', 'utf-8')
-        msg['Subject'] = 'Glitter Eyelash 2018 Product Catalog'
+        msg['Subject'] = '2019 Glitter Eyelash Product Catalog'
         return msg

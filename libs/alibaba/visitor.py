@@ -46,6 +46,97 @@ class Visitor:
         self.alibaba.login()
         self.browser = self.alibaba.browser
 
+    def parse_tr(self, tr):
+        visitor = {}
+        date = tr.find_element_by_css_selector('td.td-checkbox input').get_attribute('statdate')
+        visitor['id'] = tr.find_element_by_css_selector('td.td-checkbox input').get_attribute('visitorid')
+        visitor['idx'] = tr.find_element_by_css_selector('td.td-checkbox input').get_attribute('visitoridx')
+        visitor['date'] = date
+        visitor['region'] = tr.find_element_by_css_selector('td.td-region span').get_attribute('title')
+
+        pv_span = tr.find_element_by_css_selector('td.td-pv span')
+        visitor['pv'] = pv_span.text
+
+        visitor['pv-detail'] = []
+        if visitor['pv'] != '0':
+            css_pv_detail = '#J-visitor-detail'
+            css_pv_detail_close = '#J-vistor-detail-close'
+            css_pv_detail_body = '#J-visitor-detail-tbl-tbody'
+            css_pv_detail_pagination = '#J-pagination-visitor-detail'
+            pv_span.click()
+            while True:
+                pv_detail_tbody = WebDriverWait(self.browser, 15).until(
+                    EC.visibility_of_element_located((By.CSS_SELECTOR, css_pv_detail_body)))
+
+                for pv_tr in pv_detail_tbody.find_elements_by_css_selector('tr'):
+                    pv = {}
+                    pv['idx'] = pv_tr.find_element_by_css_selector('td.visitor-detail-index').text
+                    pv['page'] = pv_tr.find_element_by_css_selector('td.visitor-detail-page a').get_attribute('href')
+                    page_acts = pv_tr.find_element_by_css_selector('td.visitor-detail-page div').text
+                    if '已发起询盘' in page_acts:
+                        pv['inquiried'] = True
+                    else:
+                        pv['inquiried'] = False
+
+                    if '已发起TradeManager咨询' in page_acts:
+                        pv['tm_inquiried'] = True
+                    else:
+                        pv['tm_inquiried'] = False
+                    pv['stay'] = pv_tr.find_element_by_css_selector('td.visitor-detail-stay').text
+                    pv['time'] = pv_tr.find_element_by_css_selector('td.visitor-detail-time').text
+                    visitor['pv-detail'].append(pv)
+
+                next_pv_detail_button = self.browser.find_elements_by_css_selector(css_pv_detail_pagination + ' .ui-pagination-active + a')
+                if next_pv_detail_button:
+                    while True:
+                        try:
+                            ActionChains(self.browser).move_to_element(next_pv_detail_button[0]).perform()
+                            next_pv_detail_button[0].click()
+                            break
+                        except WebDriverException as e:
+                            if 'is not clickable at point' in str(e):
+                                self.browser.implicitly_wait(0.5)
+                                continue
+                            else:
+                                raise e
+                else:
+                    break
+
+            while True:
+                try:
+                    self.browser.find_element_by_css_selector(css_pv_detail_close).click()
+                    break
+                except WebDriverException as e:
+                    if 'is not clickable at point' in str(e):
+                        self.browser.implicitly_wait(0.5)
+                        continue
+                    else:
+                        raise e
+
+        visitor['stay'] = tr.find_element_by_css_selector('td.td-stay-duration').text
+
+        kws_div = tr.find_elements_by_css_selector('td.td-search-keywords>div.search-keywords')
+        if kws_div:
+            kws_div = kws_div[0]
+            kws_text = kws_div.get_attribute('data-text')
+            visitor['keywords'] =  re.sub('</div><div>', ',', kws_text)[5:-6].split(',')
+            visitor['search_keyword_indices'] = []
+            for idx, div in enumerate(kws_div.find_elements_by_css_selector('div')):
+                if div.find_elements_by_css_selector('span.search-keyword'):
+                    visitor['search_keyword_indices'].append(idx)
+        else:
+            visitor['keywords'] = []
+            visitor['search_keyword_indices'] = []
+
+        visitor['minisite-acts'] = []
+        for div in tr.find_elements_by_css_selector('td.td-minisite-active span'):
+            visitor['minisite-acts'].append(div.get_attribute('textContent'))
+        visitor['website-acts'] = []
+        for div in tr.find_elements_by_css_selector('td.td-website-active span'):
+            visitor['website-acts'].append(div.get_attribute('textContent'))
+
+        return visitor
+
     def crawl_current_page_visitors(self):
         css_tbody = '#J-visitors-tbl-tbody'
         tbody = WebDriverWait(self.browser, 15).until(
@@ -56,98 +147,12 @@ class Visitor:
 
         for tr in tbody.find_elements_by_css_selector(css_tbody+' tr.J-visitors-table-tr'):
             ActionChains(self.browser).move_to_element(tr).perform()
-            date = tr.find_element_by_css_selector('td.td-checkbox input').get_attribute('statdate')
 
-            fn = 'visitors_'+date+'.json'
+            visitor = self.parse_tr(tr)
+
+            fn = 'visitors_'+visitor['date']+'.json'
             if fn in fns:
                 break
-
-            visitor = {}
-            visitor['id'] = tr.find_element_by_css_selector('td.td-checkbox input').get_attribute('visitorid')
-            visitor['idx'] = tr.find_element_by_css_selector('td.td-checkbox input').get_attribute('visitoridx')
-            visitor['date'] = date
-            visitor['region'] = tr.find_element_by_css_selector('td.td-region span').get_attribute('title')
-
-            pv_span = tr.find_element_by_css_selector('td.td-pv span')
-            visitor['pv'] = pv_span.text
-
-            visitor['pv-detail'] = []
-            if visitor['pv'] != '0':
-                css_pv_detail = '#J-visitor-detail'
-                css_pv_detail_close = '#J-vistor-detail-close'
-                css_pv_detail_body = '#J-visitor-detail-tbl-tbody'
-                css_pv_detail_pagination = '#J-pagination-visitor-detail'
-                pv_span.click()
-                while True:
-                    pv_detail_tbody = WebDriverWait(self.browser, 15).until(
-                        EC.visibility_of_element_located((By.CSS_SELECTOR, css_pv_detail_body)))
-
-                    for pv_tr in pv_detail_tbody.find_elements_by_css_selector('tr'):
-                        pv = {}
-                        pv['idx'] = pv_tr.find_element_by_css_selector('td.visitor-detail-index').text
-                        pv['page'] = pv_tr.find_element_by_css_selector('td.visitor-detail-page a').get_attribute('href')
-                        page_acts = pv_tr.find_element_by_css_selector('td.visitor-detail-page div').text
-                        if '已发起询盘' in page_acts:
-                            pv['inquiried'] = True
-                        else:
-                            pv['inquiried'] = False
-
-                        if '已发起TradeManager咨询' in page_acts:
-                            pv['tm_inquiried'] = True
-                        else:
-                            pv['tm_inquiried'] = False
-                        pv['stay'] = pv_tr.find_element_by_css_selector('td.visitor-detail-stay').text
-                        pv['time'] = pv_tr.find_element_by_css_selector('td.visitor-detail-time').text
-                        visitor['pv-detail'].append(pv)
-
-                    next_pv_detail_button = self.browser.find_elements_by_css_selector(css_pv_detail_pagination + ' .ui-pagination-active + a')
-                    if next_pv_detail_button:
-                        while True:
-                            try:
-                                ActionChains(self.browser).move_to_element(next_pv_detail_button[0]).perform()
-                                next_pv_detail_button[0].click()
-                                break
-                            except WebDriverException as e:
-                                if 'is not clickable at point' in str(e):
-                                    self.browser.implicitly_wait(0.5)
-                                    continue
-                                else:
-                                    raise e
-                    else:
-                        break
-
-                while True:
-                    try:
-                        self.browser.find_element_by_css_selector(css_pv_detail_close).click()
-                        break
-                    except WebDriverException as e:
-                        if 'is not clickable at point' in str(e):
-                            self.browser.implicitly_wait(0.5)
-                            continue
-                        else:
-                            raise e
-
-            visitor['stay'] = tr.find_element_by_css_selector('td.td-stay-duration').text
-
-            kws_div = tr.find_elements_by_css_selector('td.td-search-keywords>div.search-keywords')
-            if kws_div:
-                kws_div = kws_div[0]
-                kws_text = kws_div.get_attribute('data-text')
-                visitor['keywords'] =  re.sub('</div><div>', ',', kws_text)[5:-6].split(',')
-                visitor['search_keyword_indices'] = []
-                for idx, div in enumerate(kws_div.find_elements_by_css_selector('div')):
-                    if div.find_elements_by_css_selector('span.search-keyword'):
-                        visitor['search_keyword_indices'].append(idx)
-            else:
-                visitor['keywords'] = []
-                visitor['search_keyword_indices'] = []
-
-            visitor['minisite-acts'] = []
-            for div in tr.find_elements_by_css_selector('td.td-minisite-active span'):
-                visitor['minisite-acts'].append(div.get_attribute('textContent'))
-            visitor['website-acts'] = []
-            for div in tr.find_elements_by_css_selector('td.td-website-active span'):
-                visitor['website-acts'].append(div.get_attribute('textContent'))
 
             visitors.append(visitor)
 

@@ -255,6 +255,11 @@ class Inquiry:
             text = f.read()
         self.reply_templates['notify_first_reply_without_email'] = Template(text)
 
+        file = root + '//templates//inquiry_reply_template_reply_without_catalog.html'
+        with open(file, 'r') as f:
+            text = f.read()
+        self.reply_templates['reply_without_catalog'] = Template(text)
+
         file = root + '//templates//webww_reply_template_first_reply.txt'
         with open(file, 'r') as f:
             text = f.read()
@@ -297,7 +302,7 @@ class Inquiry:
             return True
         return False
 
-    def reply(self, enquiry):
+    def reply(self, enquiry, catalog_needs_to_be_sent):
         try:
             self.open_inquiry_in_new_tab(enquiry)
             conversation = self.get_conversation()
@@ -329,9 +334,15 @@ class Inquiry:
             eid = enquiry['id']
             tracking = self.tracking_ids[eid]
             last_status = tracking['status'][-1]
-            greetings = '<p>Pleased to hear from you.</p><br>'
+            greetings = '<p>Thanks for your inquiry.</p><br>'
             if last_status == 'new':
-                if emails:
+                if not catalog_needs_to_be_sent:
+                    params = {'buyer': buyer['name'], 'greetings': greetings, 'email': ','.join(emails), 'sender': self.lname, 'whatsapp': self.mobile}
+                    message = self.reply_templates['reply_without_catalog'].substitute(params)
+                    if self.send_message(message):
+                        tracking['status'].append('was replied')
+                        self.save_tracking_ids()
+                elif emails:
                     mime_message = Email.message_of_product_catalog(self.market, self.account, buyer['name'])
                     if Email.send(self.account, emails, mime_message):
                         params = {'buyer': buyer['name'], 'greetings': greetings, 'email': ','.join(emails), 'sender': self.lname, 'whatsapp': self.mobile}
@@ -445,6 +456,15 @@ class Inquiry:
                     raise e
 
     def check(self):
+
+        catalog_needs_to_be_sent = True
+
+        now = pendulum.now()
+        today_0800 = now.set(hour=8, minute=0, second=0, microsecond=0)
+        today_2000 = now.set(hour=20, minute=0, second=0, microsecond=0)
+        if today_0800 < now < today_2000:
+            catalog_needs_to_be_sent = False
+
         self.load_url()
 
         self.load_tracking_ids()
@@ -457,7 +477,7 @@ class Inquiry:
                 continue
 
             print('enquiry ' + enquiry['id'] + ' reply is needed')
-            self.reply(enquiry)
+            self.reply(enquiry, catalog_needs_to_be_sent)
 
     def webww_check(self):
         threads = []
