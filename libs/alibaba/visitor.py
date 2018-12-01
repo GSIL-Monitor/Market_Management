@@ -41,10 +41,61 @@ class Visitor:
         self.browser = browser
         self.headless = headless
 
+        self.products = {}
+        root = market['directory']+'_config'
+        product_list = JSON.deserialize(root, '.', 'product_list.json')
+        for p in product_list:
+            self.products[p['ali_id']] = p
+
+        self.recommended = {}
+        self.recommended['mink eyelash'] = ['60761530720','60763122328']
+        self.recommended['silk eyelash'] = ['60795757606','60792506357']
+        self.recommended['magnetic eyelash'] = ['60763607812', '60762283935']
+        self.recommended['individual eyelash'] = ['60732345735', '60764332933']
+        self.recommended['premade fans'] = ['60762376749', '60795868865']
+        self.recommended['packaging box'] = ['60815093246', '60818095391']
+
+        self.mail_message = "Hi,\\nNice Day. This is Ada.\\nThanks for your visit to our products.\\nWould you pls tell us your WhatsApp number? I would like to send our product catalog and price list to you. Thanks\\nMy WhatsApp  is +8618563918130.\\n\\nRegards\\nAda"
+
     def login(self):
         self.alibaba = Alibaba(self.lid, self.lpwd, headless=self.headless, browser=self.browser)
         self.alibaba.login()
         self.browser = self.alibaba.browser
+
+    def load_url(self):
+        while True:
+            try:
+                if self.alibaba is None:
+                    alibaba = Alibaba(self.lid, self.lpwd, headless=self.headless, browser=self.browser)
+                    alibaba.login()
+                    if self.browser is None:
+                        self.browser = alibaba.browser
+                    self.alibaba = alibaba
+
+                self.browser.get(self.api)
+                if 'login.alibaba.com' in self.browser.current_url:
+                    self.alibaba.login()
+                    self.browser.get(self.api)
+
+                WebDriverWait(self.browser, 15).until(
+                    EC.invisibility_of_element_located((By.CSS_SELECTOR, 'div.bp-loading-panel')))
+
+                # try to close all follow-me-popups
+                while True:
+                    btn_close = self.browser.find_elements_by_css_selector('div.follow-me-close')
+                    if btn_close:
+                        webdriver.ActionChains(self.browser).send_keys(Keys.ESCAPE).perform()
+                        # wait 1 second to see if new popup commes
+                        self.browser.implicitly_wait(1)
+                        continue
+                    else:
+                        break
+                break
+            except WebDriverException as e:
+                if 'chrome not reachable' in str(e):
+                    print(str(e))
+                    self.browser = None
+                continue
 
     def parse_tr(self, tr):
         visitor = {}
@@ -211,11 +262,33 @@ class Visitor:
         return visitors
 
     def update(self):
-        self.login()
-        self.browser.get(self.api)
+        self.load_url()
         close_btn = self.browser.find_elements_by_css_selector('div.ui-window a.ui-window-close')
         if close_btn and close_btn[0].is_displayed():
             close_btn[0].click()
         self.switch_to_last_31_days()
         visitors = self.crawl_visitors()
         self.serialize(visitors)
+
+    def mail(self):
+        self.load_url()
+        close_btn = self.browser.find_elements_by_css_selector('div.ui-window a.ui-window-close')
+        if close_btn and close_btn[0].is_displayed():
+            close_btn[0].click()
+        self.switch_to_last_31_days()
+
+        check_box = self.browser.find_elements_by_css_selector('input#J-condition-mailable')
+        if check_box:
+            check_box[0].click()
+            
+        while True:
+            result = self.mail_to_current_page_visitors()
+
+            if not self.next_page():
+                break
+
+    def mail_to_current_page_visitors(self):
+        pass
+
+    def mail_to_visitor(self, tr, recommendation):
+        pass
