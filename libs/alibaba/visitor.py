@@ -47,13 +47,23 @@ class Visitor:
         for p in product_list:
             self.products[p['ali_id']] = p
 
+        rp = {}
+        rp['mink eyelash'] = {'ali_id': '60761530720', 'price': 1.5}
+        rp['silk eyelash'] = {'ali_id': '60795757606', 'price': 0.8}
+        rp['magnetic eyelash'] = {'ali_id': '60763607812', 'price': 1.1}
+        rp['individual eyelash'] = {'ali_id': '60732345735', 'price': 2.3}
+        rp['premade fans glue bonded'] = {'ali_id': '60762376749', 'price': 1.6}
+        rp['premade fans heat bonded'] = {'ali_id': '60795873604', 'price': 1.9}
+
         self.recommended = {}
-        self.recommended['mink eyelash'] = ['60761530720','60763122328']
-        self.recommended['silk eyelash'] = ['60795757606','60792506357']
-        self.recommended['magnetic eyelash'] = ['60763607812', '60762283935']
-        self.recommended['individual eyelash'] = ['60732345735', '60764332933']
-        self.recommended['premade fans'] = ['60762376749', '60795868865']
-        self.recommended['packaging box'] = ['60815093246', '60818095391']
+        self.recommended['mink'] = [rp['mink eyelash'], rp['silk eyelash'], rp['magnetic eyelash']]
+        self.recommended['silk'] = [rp['silk eyelash'], rp['mink eyelash'], rp['magnetic eyelash']]
+        self.recommended['magnetic'] = [rp['magnetic eyelash'], rp['mink eyelash'], rp['silk eyelash']]
+        self.recommended['individual eyelash'] = [rp['individual eyelash'], rp['premade fans glue bonded'], rp['premade fans heat bonded']]
+        self.recommended['glue bonded'] = [rp['premade fans glue bonded'], rp['premade fans heat bonded'], rp['individual eyelash']]
+        self.recommended['heat bonded'] = [rp['premade fans heat bonded'], rp['premade fans glue bonded'], rp['individual eyelash']]
+        self.recommended['premade fans'] = self.recommended['glue bonded']
+        self.recommended['default'] = self.recommended['mink'] + self.recommended['individual eyelash']
 
         self.mail_message = "Hi,\\nNice Day. This is Ada.\\nThanks for your visit to our products.\\nWould you pls tell us your WhatsApp number? I would like to send our product catalog and price list to you. Thanks\\nMy WhatsApp  is +8618563918130.\\n\\nRegards\\nAda"
 
