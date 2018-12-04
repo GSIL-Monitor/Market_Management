@@ -11,6 +11,7 @@ from libs.alibaba.alibaba import Alibaba
 from libs.alibaba.p4p import P4P
 from libs.alibaba.products_ranking import ProductsRanking
 from libs.alibaba.inquiry import Inquiry
+from libs.alibaba.visitor import Visitor
 from libs.others.osoeco import OSOECO
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
@@ -108,6 +109,11 @@ def webww_check(self):
     inquiry.load_url()
     inquiry.webww_check()
 
+@app.task(bind=True, name="tasks.mail_to_visitors")
+def mail_to_visitors(self):
+    visitor = get_visitor(current_task.request.hostname)
+    visitor.mail()
+
 @app.task(bind=True, name="tasks.power_off")
 def power_off(self):
     os.system('shutdown -s')
@@ -174,6 +180,27 @@ def get_inquiry(node):
                 app_data['inquiry'] = Inquiry(market, account, headless=False, browser=app_data['browser'])
                 app_data['browser'] = app_data['inquiry'].browser
     return app_data['inquiry']
+
+def get_visitor(node):
+
+    if app_data['visitor'] is not None:
+        return app_data['visitor']
+
+    text = node.split('@')[0]
+    market_name = text.split(':')[0].split('[')[0]
+    lname = text.split(':')[1] if len(text.split(':')) == 2 else None
+    market = JSON.deserialize('.', 'storage', 'markets.json')[market_name]
+
+    if lname is None or lname == market['lname']:
+        app_data['visitor'] = Visitor(market, headless=False, browser=app_data['browser'])
+        app_data['browser'] = app_data['visitor'].browser
+    else:
+        for account in market['accounts']:
+            print(lname, account)
+            if lname in account['lname']:
+                app_data['visitor'] = Visitor(market, account, headless=False, browser=app_data['browser'])
+                app_data['browser'] = app_data['visitor'].browser
+    return app_data['visitor']
 
 def get_p4p(node):
 
