@@ -83,10 +83,10 @@ class Inquiry:
     def notify(self, typo, message):
         print(typo, message)
 
-    def login(self):
-        self.alibaba = Alibaba(self.lid, self.lpwd, headless=self.headless, browser=self.browser)
-        self.alibaba.login()
-        self.browser = self.alibaba.browser
+    # def login(self):
+    #     self.alibaba = Alibaba(self.lid, self.lpwd, headless=self.headless, browser=self.browser)
+    #     self.alibaba.login()
+    #     self.browser = self.alibaba.browser
 
     def load_url(self):
         while True:

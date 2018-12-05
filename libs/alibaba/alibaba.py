@@ -26,7 +26,7 @@ class Alibaba:
     # user_agent = 'Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.117 Safari/537.36'
     chrome_options = webdriver.ChromeOptions()
     chrome_options.add_argument('--disable-gpu')
-    # chrome_options.add_argument('--user-agent="'+user_agent+'"')
+    chrome_options.add_argument('--user-agent="'+user_agent+'"')
     chrome_options.add_argument('--disable-software-rasterizer')
     chrome_options.add_argument('--disable-extensions')
     chrome_options.add_argument('--disable-logging')
@@ -275,10 +275,9 @@ class Alibaba:
             self.notify(result_message, result)
 
     def submit_product(self):
-        is_structured = self.is_structured()
         # submit to next step
         btn_submit_next = None
-        if is_structured:
+        if self.is_structured() is True:
             btn_submit_next = self.browser.find_element_by_css_selector('#struct-buttons button:nth-child(3)')
         else:
             btn_submit_next = self.browser.find_element_by_css_selector('button#submitFormNext')
@@ -289,14 +288,10 @@ class Alibaba:
         # 提交表格
         self.notify("primary", "提交产品")
 
-        if is_structured:
-            WebDriverWait(self.browser, 30).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#button-prev')))
-            btn_submit = self.browser.find_element_by_css_selector('#struct-buttons button:nth-child(3)')
-        else:
+        if self.is_structured() is not True:
             btn_submit = WebDriverWait(self.browser, 15).until(
                 EC.element_to_be_clickable((By.CSS_SELECTOR, 'button#submitFormBtnA')))
-
-        self.click(btn_submit)
+            btn_submit.click()
 
         WebDriverWait(self.browser, 30).until(EC.presence_of_element_located(
             (By.CSS_SELECTOR, '.next-step-item-last.next-step-item-process,.ui2-dialog-transition')))
@@ -314,31 +309,25 @@ class Alibaba:
 
     def update_product(self, data):
         browser = self.browser
-        ali_id = str(data['ali_id'])
-        result = [ali_id, False]
         try:
             api = 'https://hz-productposting.alibaba.com/product/editing.htm?id='
+            ali_id = str(data['ali_id'])
             if not browser:
                 self.notify('danger', "没有登录，请先登录")
-                return result
+                return
 
             self.notify("primary", "打开产品 [" + ali_id + "] 编辑页面 ... ...")
             browser.get(api + ali_id)
-            # WebDriverWait(browser, 30).until(EC.visibility_of_element_located((By.CSS_SELECTOR, '#editor-container')))
-            buttons = self.browser.find_elements_by_css_selector('#dialog-footer-2 button')
-            if buttons:
-                self.click(buttons[0])
+            WebDriverWait(browser, 30).until(EC.visibility_of_element_located((By.CSS_SELECTOR, '#editor-container')))
 
-            # if self.update_product_price(data):
-            #     result = [ali_id, True]
-
+            result = False
+            if self.update_product_price(data):
+                result = True
             if self.update_product_detail_pictures(data):
-                result = [ali_id, True]
+                result = True
+
+            if result:
                 self.submit_product()
-                
-            # if self.update_product_detail(data)[1]:
-            #     self.submit_product()
-                
         except TimeoutException as e:
             self.notify('error', '更新产品 [' + ali_id + '] 数据 出错，超时，' + str(e))
             traceback.print_exc()
@@ -349,48 +338,37 @@ class Alibaba:
             self.notify('error', '更新产品 [' + ali_id + '] 数据 出错, ' + str(e))
             traceback.print_exc()
         finally:
-            return result
+            pass
 
     def update_product_price(self, data):
         if 'price' not in data:
             return False
         price = data['price']
-        
-        struct_fob = self.browser.find_element_by_css_selector('#struct-fob')
-        ActionChains(self.browser).move_to_element(struct_fob).perform()
-        
         if price['isTieredPricing']:
             self.notify("error", "该功能还没有实现 ... ...")
             return False
         else:
             self.notify("primary", "设置产品 [" + str(data['ali_id']) + "] 的价格区间 ... ...")
-            
-            time.sleep(0.5)
-            input = self.browser.find_element_by_css_selector('#struct-fob div.icbu-fob-range .range-number-max input')
-            input.send_keys(Keys.CONTROL, 'a')
-            input.send_keys(str(price['price_range'][0]))
-            
-            time.sleep(0.5)
-            input = self.browser.find_element_by_css_selector('#struct-fob div.icbu-fob-range .range-number-min input')
-            input.send_keys(Keys.CONTROL, 'a')
-            input.send_keys(str(price['price_range'][1]))
+            js_templ = "document.querySelector('{selector}').value = '{value}';"
+            js = js_templ.format(selector='#priceRangeMin', value=price['price_range'][0])
+            self.browser.execute_script(js)
+            js = js_templ.format(selector='#priceRangeMax', value=price['price_range'][1])
+            self.browser.execute_script(js)
             return True
 
-    # data = {"ali_id": xxxxxxxxx, "detail_pictures": [{"old", "//xxxxxx", "new": "//xxxxxxxx"}]}
     def update_product_detail_pictures(self, data):
         result = False
         if 'detail_pictures' not in data:
             return result
         pictures = data['detail_pictures']
+        browser = self.browser
 
-        element = self.browser.find_element_by_css_selector("#struct-superText")
-        ActionChains(self.browser).move_to_element(element).perform()
+        element = browser.find_element_by_css_selector("#editor-container")
+        ActionChains(browser).move_to_element(element).perform()
         # self.notify("primary", "开始 设置 产品详情页 ... ...")
         # 点击 详情编辑器 ‘源代码’ 按钮， 清空内容，再切换回 富文本 编辑状态
-        switch_btn = WebDriverWait(self.browser, 5).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, '#mceu_0 button')))
-        switch_btn.click()
-        textarea = WebDriverWait(self.browser, 5).until(
+        browser.find_element_by_css_selector('#mceu_0 button').click()
+        textarea = WebDriverWait(browser, 5).until(
             EC.visibility_of_element_located((By.CSS_SELECTOR, '#mceu_46 textarea')))
 
         text = textarea.get_attribute('value')
@@ -414,101 +392,11 @@ class Alibaba:
         if result:
             js_templ = "document.querySelector('{selector}').value = '{value}';"
             js = js_templ.format(selector='#mceu_46 textarea', value=re.sub('\n', '\\\\n', str(soup)))
-            self.browser.find_element_by_css_selector('#mceu_46 textarea').clear()
-            self.browser.execute_script(js)
-
-        self.browser.find_element_by_css_selector('#mceu_0 button').click()
-        WebDriverWait(self.browser, 5).until(EC.visibility_of_element_located((By.CSS_SELECTOR, '#mceu_46 iframe')))
+            browser.find_element_by_css_selector('#mceu_46 textarea').clear()
+            browser.execute_script(js)
+            browser.find_element_by_css_selector('#mceu_0 button').click()
+            WebDriverWait(browser, 5).until(EC.visibility_of_element_located((By.CSS_SELECTOR, '#mceu_46 iframe')))
         return result
-
-
-
-    def update_product_detail(self, data):
-        ali_id = data['ali_id']
-        result = [ali_id, False]
-        if 'product_detail' not in data:
-            return result
-
-        element = self.browser.find_element_by_css_selector("#struct-superText")
-        ActionChains(self.browser).move_to_element(element).perform()
-        # self.notify("primary", "开始 设置 产品详情页 ... ...")
-        # 点击 详情编辑器 ‘源代码’ 按钮， 清空内容，再切换回 富文本 编辑状态
-        switch_btn = WebDriverWait(self.browser, 5).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, '#mceu_0 button')))
-        switch_btn.click()
-        textarea = WebDriverWait(self.browser, 5).until(
-            EC.visibility_of_element_located((By.CSS_SELECTOR, '#mceu_46 textarea')))
-
-        text = textarea.get_attribute('value')
-        doc = pq(text)
-
-        first_p = None
-        first_img = None
-        while True:
-            first_p = pq(doc.find('p')[0])
-            if first_p.find('img').length == 1:
-                first_img = pq(first_p.find('img')[0])
-
-            if first_p.text().strip() or first_p.find('img').length > 0:
-                break
-
-            if not first_p.text().strip():
-                first_p.remove()
-
-        print(first_img and first_img.attr('ori-height') )
-        if not first_img or first_img.attr('ori-height') != "165":
-            result = [ali_id, True]
-            print('change the title')
-            if first_p.text().strip():
-                first_p.attr('style', "text-align: center; background-color: rgba(255, 103, 108, 1); color: white; padding-top: 8px; padding-bottom: 8px;")
-                first_p.find('span').attr('style', "font-size: 23px;")
-                
-                next_p = first_p.next()
-                if next_p.find('img').length != 0:
-                    first_br = next_p.find('br:first-child')
-                    if first_br:
-                        pq(first_br[0]).remove()
-                else: 
-                    if not next_p.text().strip():
-                        next_p.remove()
-
-            doc.prepend('<p style="margin-bottom: 35px;"><img src="//sc01.alicdn.com/kf/HTB1UVE4Kf5TBuNjSspmq6yDRVXaG/231186930/HTB1UVE4Kf5TBuNjSspmq6yDRVXaG.jpg" alt="contact us 0.jpg" ori-width="750" ori-height="165" /></p>')
-
-            
-            print(doc.find('img').length)
-            print('reduce the number of pictures')
-            if doc.find('img').length > 15:
-                last_p = None
-                while True:
-                    last_p = pq(doc.find('p')[-1])
-                    if last_p.find('img').length>0:
-                        break
-                    else:
-                        last_p.remove()
-
-                if last_p.find('img').length > 1:
-                    last_p.find('img:last-child').remove()
-                    last_p.find('img:last-child').remove()
-
-                last_p.append(data['product_detail']['lp'])
-        else:
-            result = [ali_id, False]
-            print('no need to change')
-        print(doc.find('img').length, result)
-
-        if result[1]:
-            js_templ = "document.querySelector('{selector}').value = '{value}';"
-            js = js_templ.format(selector='#mceu_46 textarea', value=re.sub('\n', '\\\\n', doc.html()))
-            self.browser.find_element_by_css_selector('#mceu_46 textarea').clear()
-            self.browser.execute_script(js)
-    #         self.browser.find_element_by_css_selector('#mceu_0 button').click()
-    #         WebDriverWait(self.browser, 5).until(EC.visibility_of_element_located((By.CSS_SELECTOR, '#mceu_46 iframe')))
-
-        self.browser.find_element_by_css_selector('#mceu_0 button').click()
-        WebDriverWait(self.browser, 5).until(EC.visibility_of_element_located((By.CSS_SELECTOR, '#mceu_46 iframe')))
-
-        return result
-
 
     def post_similar_product(self, product, similar_ali_pid):
 
@@ -816,13 +704,10 @@ class Alibaba:
                         pq_a = pq_item.find('.product-subject a')
                         if len(pq_a) == 0:
                             continue
-    #                     print(pq_item.find('.product-model').text())
+
                         product['href'] = pq_a.attr('href')
                         product['title'] = pq_a.text().strip().lower()
-                        if pq_item.find('.product-model'):
-                            product['pid'] = pq_item.find('.product-model').text().split(':')[1].strip()
-                        else:
-                            product['pid'] = ''
+                        product['pid'] = pq_item.find('.product-model').text().split(':')[1].strip()
                         product['category'] = pq_item.find('.group-name').text().split(':')[1].strip()
                         product['update'] = pq_item.find('.next-col:nth-child(5) span').text().strip()
                         product['price'] = pq_item.find('.next-col:nth-child(3)').text().strip()
@@ -896,7 +781,7 @@ class Alibaba:
         finally:
             if self.socketio:
                 self.notify("get_posted_product_info_result", products)
-            return products
+            # return products
 
     def click(self, btn):
         while True:
