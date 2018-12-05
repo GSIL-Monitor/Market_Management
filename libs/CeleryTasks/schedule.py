@@ -45,12 +45,6 @@ app.conf.beat_schedule = {
         'options': {'queue': 'Eyelashes_p4p_1'}
     },
 
-    # 'Eyelashes_p4p_check_15': {                                          # 直通车高消费词
-    #     'task': 'tasks.p4p_check',
-    #     'schedule': crontab(minute=minutes_30_60_2, hour='21'),
-    #     'kwargs': {'group': '直通车高消费词'},
-    #     'options': {'queue': 'Eyelashes_p4p_2'}
-    # },
     'Eyelashes_p4p_check_16': {                                          # 直通车高消费词
         'task': 'tasks.p4p_check',
         'schedule': crontab(day_of_week='0-4',  minute=minutes_0_60_2_1, hour='0-5,23'),
@@ -101,6 +95,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=minutes_0_60_5_0, hour='0-23'),
         'options': {'queue': 'Eyelashes_inquiry_Ada'}
     },
+
     'Tools_p4p_check_0': {
         'task': 'tasks.p4p_check',
         'schedule': crontab(minute=minutes_0_45_2_1, hour='14'),

@@ -78,10 +78,10 @@ class Visitor:
 
         self.mail_message = "Hi,\\nNice Day. This is Ada.\\nThanks for your visit to our products.\\nWould you pls tell us your WhatsApp number? I would like to send our product catalog and price list to you. Thanks\\nMy WhatsApp  is +8618563918130.\\n\\nRegards\\nAda"
 
-    def login(self):
-        self.alibaba = Alibaba(self.lid, self.lpwd, headless=self.headless, browser=self.browser)
-        self.alibaba.login()
-        self.browser = self.alibaba.browser
+    # def login(self):
+    #     self.alibaba = Alibaba(self.lid, self.lpwd, headless=self.headless, browser=self.browser)
+    #     self.alibaba.login()
+    #     self.browser = self.alibaba.browser
 
     def load_url(self):
         while True:
@@ -299,8 +299,10 @@ class Visitor:
             
         dt_1400 = pendulum.parse('14:00', tz='Asia/Shanghai')
         dt_1500 = pendulum.parse('15:00', tz='Asia/Shanghai')
-        if dt_1400 < pendulum.now() < dt_1500:
-            self.switch_to_last_31_days()
+        # if dt_1400 < pendulum.now() < dt_1500:
+            # self.switch_to_last_31_days()
+
+        self.switch_to_last_31_days()
 
         self.browser.implicitly_wait(0.5)
         WebDriverWait(self.browser, 15).until(
@@ -308,6 +310,10 @@ class Visitor:
 
         div_overview_has_mails = WebDriverWait(self.browser, 15).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, 'div.overview-has-mails')))
+        
+        if not div_overview_has_mails.is_displayed():
+            return
+
         remain = div_overview_has_mails.find_element_by_css_selector('span.overview-remain').get_attribute('data-remain')
         remain = int(remain)
 
@@ -381,106 +387,117 @@ class Visitor:
         if len(self.browser.window_handles) == 1:
             return False
         
-        self.browser.switch_to_window(self.browser.window_handles[1])
-        
-        # 切换至新 Tab
-        form = self.browser.find_element_by_css_selector('div.negotiation-product-form')
-        div_product_items = form.find_element_by_css_selector('div.product-editable div[data-role="product-items"]')
-        
-        # remove first product item
-        product_item = div_product_items.find_element_by_css_selector('div.product-item:first-child')
-        product_item.find_element_by_css_selector('div.remove-item a').click()
-        
-        for rp in recommendation:
-            ali_id = rp['ali_id']
-            print('-----------------', ali_id, '---------------------')
+        try:
+            self.browser.switch_to_window(self.browser.window_handles[1])
             
-            subject = self.products[ali_id]['title']
-        
-            btn_choose_product = form.find_element_by_css_selector('a[data-role="chooseProduct"]')
-            btn_choose_product.click()
-            WebDriverWait(self.browser, 3).until(EC.visibility_of_element_located((By.CSS_SELECTOR, 'div.ui-modal')))
+            # 切换至新 Tab
+            # form = self.browser.find_element_by_css_selector('div.negotiation-product-form')
+            form = WebDriverWait(self.browser, 5).until(EC.visibility_of_element_located((By.CSS_SELECTOR, 'div.negotiation-product-form')))
+            div_product_items = form.find_element_by_css_selector('div.product-editable div[data-role="product-items"]')
             
-            # switch to iframe
-            WebDriverWait(self.browser, 3).until(EC.frame_to_be_available_and_switch_to_it((By.CSS_SELECTOR, 'iframe.simple-content-iframe')))
+            # remove first product item
+            product_item = div_product_items.find_element_by_css_selector('div.product-item:first-child')
+            product_item.find_element_by_css_selector('div.remove-item a').click()
             
-            WebDriverWait(self.browser, 3).until(EC.visibility_of_element_located((By.CSS_SELECTOR, 'ul#sp-products-list li:first-child')))
-            
-            btn_search = self.browser.find_element_by_css_selector('input#sp-basicSearchSubmit')
-            self.browser.execute_script("document.getElementById('sp-basicSearchSubject').value='"+subject+"'")
-            
-            ul_last_product = self.browser.find_elements_by_css_selector('ul#sp-products-list li:last-child')
-            btn_search.click()
-            if ul_last_product:
-                WebDriverWait(self.browser, 3).until(EC.staleness_of(ul_last_product[0]))
+            count = 0
+            for rp in recommendation:
+                ali_id = rp['ali_id']
+                print('-----------------', ali_id, '---------------------')
                 
-            last_li = None
-            found = False
-            while True:
+                subject = self.products[ali_id]['title']
+            
+                btn_choose_product = form.find_element_by_css_selector('a[data-role="chooseProduct"]')
+                btn_choose_product.click()
+                WebDriverWait(self.browser, 3).until(EC.visibility_of_element_located((By.CSS_SELECTOR, 'div.ui-modal')))
                 
-                if last_li:
-                    WebDriverWait(self.browser, 3).until(EC.staleness_of(last_li))
+                # switch to iframe
+                WebDriverWait(self.browser, 3).until(EC.frame_to_be_available_and_switch_to_it((By.CSS_SELECTOR, 'iframe.simple-content-iframe')))
+                
                 WebDriverWait(self.browser, 3).until(EC.visibility_of_element_located((By.CSS_SELECTOR, 'ul#sp-products-list li:first-child')))
+                
+                btn_search = self.browser.find_element_by_css_selector('input#sp-basicSearchSubmit')
+                self.browser.execute_script("document.getElementById('sp-basicSearchSubject').value='"+subject+"'")
+                
+                ul_last_product = self.browser.find_elements_by_css_selector('ul#sp-products-list li:last-child')
+                btn_search.click()
+                if ul_last_product:
+                    WebDriverWait(self.browser, 3).until(EC.staleness_of(ul_last_product[0]))
                     
-                lis_products = self.browser.find_elements_by_css_selector('ul#sp-products-list li')
-                print(len(lis_products))
-                for li in lis_products:
-                    last_li = li
-                    if ali_id in li.get_attribute('id'):
-                        li.click()
-                        found = True
+                last_li = None
+                found = False
+                while True:
+                    
+                    if last_li:
+                        WebDriverWait(self.browser, 3).until(EC.staleness_of(last_li))
+                    WebDriverWait(self.browser, 3).until(EC.visibility_of_element_located((By.CSS_SELECTOR, 'ul#sp-products-list li:first-child')))
+                        
+                    lis_products = self.browser.find_elements_by_css_selector('ul#sp-products-list li')
+                    print(len(lis_products))
+                    for li in lis_products:
+                        last_li = li
+                        if ali_id in li.get_attribute('id'):
+                            li.click()
+                            found = True
+                            break
+
+                    if found:
                         break
 
-                if found:
-                    break
+                    btn_next = self.browser.find_element_by_css_selector('div#sp-paginator a:last-child')
+                    if not btn_next.is_displayed():
+                        break
+                    else:
+                        btn_next.click()
+                        
+                btn_add_product_submit = self.browser.find_element_by_css_selector('input#sp-addProductSubmit')
+                btn_add_product_submit.click()
+                
+                # switch back from iframe
+                self.browser.switch_to.default_content()
+                
+                div = None
+                while True:
+                    div = self.browser.find_elements_by_css_selector('div.product-item[data-pid="'+ali_id+'"]')
+                    if div:
+                        div = div[0]
+                        break
+                    else:
+                        self.browser.implicitly_wait(0.5)
+                
+                # fill the quantity
+        #         div = self.browser.find_element_by_css_selector('div.product-item[data-pid="'+ali_id+'"]')
+                input_quantity = div.find_element_by_css_selector('input[name="quantity"]')
+                input_quantity.send_keys('1')
+                # select unit
+                unit = self.products[ali_id]['price'].split('/')[-1].strip()
+                div.find_element_by_css_selector('div.products-unit').click()
+                ul_unit_list = div.find_element_by_css_selector('div[data-role="unit-list"] ul')
+                WebDriverWait(self.browser, 3).until(EC.visibility_of(ul_unit_list))
+                for li in ul_unit_list.find_elements_by_css_selector('li'):
+                    if li.text.startswith(unit):
+                        ActionChains(self.browser).move_to_element(li).perform()
+                        li.click()
+                        break
+                # set the price
+                input_price = div.find_element_by_css_selector('input[name="unitPrice"]')
+                input_price.send_keys(str(rp['price']))
+                
+                div.find_element_by_css_selector('div.products-price').click()
 
-                btn_next = self.browser.find_element_by_css_selector('div#sp-paginator a:last-child')
-                if not btn_next.is_displayed():
+                count += 1
+                if count == 5:
                     break
-                else:
-                    btn_next.click()
-                    
-            btn_add_product_submit = self.browser.find_element_by_css_selector('input#sp-addProductSubmit')
-            btn_add_product_submit.click()
+                
+            self.browser.execute_script('document.querySelector("textarea").value="'+self.mail_message+'"')
             
-            # switch back from iframe
-            self.browser.switch_to.default_content()
-            
-            div = None
-            while True:
-                div = self.browser.find_elements_by_css_selector('div.product-item[data-pid="'+ali_id+'"]')
-                if div:
-                    div = div[0]
-                    break
-                else:
-                    self.browser.implicitly_wait(0.5)
-            
-            # fill the quantity
-    #         div = self.browser.find_element_by_css_selector('div.product-item[data-pid="'+ali_id+'"]')
-            input_quantity = div.find_element_by_css_selector('input[name="quantity"]')
-            input_quantity.send_keys('1')
-            # select unit
-            unit = self.products[ali_id]['price'].split('/')[-1].strip()
-            div.find_element_by_css_selector('div.products-unit').click()
-            ul_unit_list = div.find_element_by_css_selector('div[data-role="unit-list"] ul')
-            WebDriverWait(self.browser, 3).until(EC.visibility_of(ul_unit_list))
-            for li in ul_unit_list.find_elements_by_css_selector('li'):
-                if li.text.startswith(unit):
-                    ActionChains(self.browser).move_to_element(li).perform()
-                    li.click()
-                    break
-            # set the price
-            input_price = div.find_element_by_css_selector('input[name="unitPrice"]')
-            input_price.send_keys(str(rp['price']))
-            
-            div.find_element_by_css_selector('div.products-price').click()
-            
-        self.browser.execute_script('document.querySelector("textarea").value="'+self.mail_message+'"')
-        
-        btn_send = visitor.browser.find_element_by_css_selector('a.aui-leads-send-button')
-        ActionChains(self.browser).move_to_element(btn_send).perform()
-        btn_send.click()
-        WebDriverWait(self.browser, 5).until(EC.visibility_of_element_located((By.CSS_SELECTOR, 'div.ui2-feedback-success')))
-        
-        self.browser.close()
-        self.browser.switch_to_window(self.browser.window_handles[0])
+            btn_send = self.browser.find_element_by_css_selector('a.aui-leads-send-button')
+            ActionChains(self.browser).move_to_element(btn_send).perform()
+            btn_send.click()
+
+            WebDriverWait(self.browser, 5).until(EC.visibility_of_element_located((By.CSS_SELECTOR, 'div.ui2-feedback-success, div.ui2-dialog-transition')))
+        except Exception as e:
+            print(str(e))
+            traceback.print_exc()
+        finally:
+            self.browser.close()
+            self.browser.switch_to_window(self.browser.window_handles[0])

@@ -38,6 +38,7 @@ import traceback
 import threading
 
 # app = Celery('tasks', backend='redis://localhost/0', broker='redis://localhost/0')
+headless = False
 app = Celery('tasks')
 app.config_from_object('conf.celeryconfig')
 
@@ -100,17 +101,20 @@ def p4p_turn_all_off(self, group='all'):
 
 @app.task(bind=True, name="tasks.inquiry_check")
 def inquiry_check(self):
+    print('-----------------------------------------------')
     inquiry = get_inquiry(current_task.request.hostname)
     inquiry.check()
 
 @app.task(bind=True, name="tasks.webww_check")
 def webww_check(self):
+    print('+++++++++++++++++++++++++++++++++++++++++++++++++++')
     inquiry = get_inquiry(current_task.request.hostname)
     inquiry.load_url()
     inquiry.webww_check()
 
 @app.task(bind=True, name="tasks.mail_to_visitors")
 def mail_to_visitors(self):
+    print('*****************************************************')
     visitor = get_visitor(current_task.request.hostname)
     visitor.mail()
 
@@ -127,16 +131,22 @@ def reboot(self):
 
 @app.task(bind=True, name="tasks.osoeco_checkin")
 def osoeco_checkin(self):
-    if app_data['browser'] is None:
-        browser = webdriver.Chrome(chrome_options=chrome_options)
-        browser.set_window_size(1920, 1200)
-        app_data['browser'] = browser
+    # if app_data['browser'] is None:
+    #     browser = app_data['browser']
+    #     browser.set_window_size(1920, 1200)
+        # app_data['browser'] = browser
     OSOECO.checkin(app_data['browser'])
 
 @app.task(bind=True, name="tasks.add")
 def add(self, x, y):
     print('===>', app.conf.broker_url)
     return x+y
+
+def get_browser():
+    if not app_data['browser']:
+        app_data['browser'] = webdriver.Chrome(chrome_options=chrome_options)
+        app_data['browser'].maximize_window()
+    return app_data['browser']
 
 def get_alibaba(node):
 
@@ -149,14 +159,14 @@ def get_alibaba(node):
     market = JSON.deserialize('.', 'storage', 'markets.json')[market_name]
 
     if lname is None or lname == market['lname']:
-        app_data['alibaba'] = Alibaba(market['lid'], market['lpwd'], headless=False, browser=app_data['browser'])
-        app_data['browser'] = app_data['alibaba'].browser
+        app_data['alibaba'] = Alibaba(market['lid'], market['lpwd'], headless=headless, browser=get_browser())
+        # app_data['browser'] = app_data['alibaba'].browser
     else:
         for account in market['accounts']:
             print(lname, account)
             if lname in account['lname']:
-                app_data['alibaba'] = Alibaba(alibaba['lid'], market['lpwd'], headless=False, browser=app_data['browser'])
-                app_data['browser'] = app_data['alibaba'].browser
+                app_data['alibaba'] = Alibaba(alibaba['lid'], market['lpwd'], headless=headless, browser=get_browser())
+                # app_data['browser'] = app_data['alibaba'].browser
     app_data['alibaba'].login()
     return app_data['alibaba']
 
@@ -171,19 +181,19 @@ def get_inquiry(node):
     market = JSON.deserialize('.', 'storage', 'markets.json')[market_name]
 
     if lname is None or lname == market['lname']:
-        app_data['inquiry'] = Inquiry(market, headless=False, browser=app_data['browser'])
-        app_data['browser'] = app_data['inquiry'].browser
+        app_data['inquiry'] = Inquiry(market, headless=headless, browser=get_browser())
+        # app_data['browser'] = app_data['inquiry'].browser
     else:
         for account in market['accounts']:
             print(lname, account)
             if lname in account['lname']:
-                app_data['inquiry'] = Inquiry(market, account, headless=False, browser=app_data['browser'])
-                app_data['browser'] = app_data['inquiry'].browser
+                app_data['inquiry'] = Inquiry(market, account, headless=headless, browser=get_browser())
+                # app_data['browser'] = app_data['inquiry'].browser
     return app_data['inquiry']
 
 def get_visitor(node):
 
-    if app_data['visitor'] is not None:
+    if 'visitor' in app_data:
         return app_data['visitor']
 
     text = node.split('@')[0]
@@ -192,14 +202,14 @@ def get_visitor(node):
     market = JSON.deserialize('.', 'storage', 'markets.json')[market_name]
 
     if lname is None or lname == market['lname']:
-        app_data['visitor'] = Visitor(market, headless=False, browser=app_data['browser'])
-        app_data['browser'] = app_data['visitor'].browser
+        app_data['visitor'] = Visitor(market, headless=headless, browser=get_browser())
+        # app_data['browser'] = app_data['visitor'].browser
     else:
         for account in market['accounts']:
             print(lname, account)
             if lname in account['lname']:
-                app_data['visitor'] = Visitor(market, account, headless=False, browser=app_data['browser'])
-                app_data['browser'] = app_data['visitor'].browser
+                app_data['visitor'] = Visitor(market, account, headless=headless, browser=get_browser())
+                # app_data['browser'] = app_data['visitor'].browser
     return app_data['visitor']
 
 def get_p4p(node):
@@ -216,15 +226,15 @@ def get_p4p(node):
         lid = market['lid']
         lpwd = market['lpwd']
         lname = market['lname']
-        app_data['p4p'] = P4P(market, lid, lpwd, broker_url=app.conf.broker_url, browser=app_data['browser'], headless=False)
-        app_data['browser'] = app_data['p4p']
+        app_data['p4p'] = P4P(market, lid, lpwd, broker_url=app.conf.broker_url, browser=get_browser(), headless=headless)
+        # app_data['browser'] = app_data['p4p']
     else:
         for account in market['accounts']:
             if lname in account['lname']:
                 lid = account['lid']
                 lpwd = account['lpwd']
-                app_data['p4p'] = P4P(market, lid, lpwd, broker_url=app.conf.broker_url, browser=app_data['browser'], headless=False)
-                app_data['browser'] = app_data['p4p']
+                app_data['p4p'] = P4P(market, lid, lpwd, broker_url=app.conf.broker_url, browser=get_browser(), headless=headless)
+                # app_data['browser'] = app_data['p4p']
 
     return app_data['p4p']
 
