@@ -15,7 +15,6 @@ from selenium.common.exceptions import StaleElementReferenceException
 from selenium.webdriver.support.select import Select
 from bs4 import BeautifulSoup
 from pyquery import PyQuery as pq
-from libs.CeleryTasks import tasks
 import html
 import time
 import re
@@ -125,6 +124,15 @@ class Visitor:
         visitor['idx'] = tr.find_element_by_css_selector('td.td-checkbox input').get_attribute('visitoridx')
         visitor['date'] = date
         visitor['region'] = tr.find_element_by_css_selector('td.td-region span').get_attribute('title')
+
+        span_mailable = tr.find_element_by_css_selector('td.td-operate span:first-child')
+        visitor['mailable_status'] = span_mailable.get_attribute('class')
+        visitor['mailable_hint'] = span_mailable.get_attribute('hint')
+        span_mail_count = tr.find_elements_by_css_selector('td.td-operate span.send-count')
+        if span_mail_count:
+            visitor['mail_sent_count'] = span_mail_count[0].get_attribute('count')
+        else:
+            visitor['mail_sent_count'] = 0
 
         pv_span = tr.find_element_by_css_selector('td.td-pv span')
         visitor['pv'] = pv_span.text
@@ -340,9 +348,12 @@ class Visitor:
             if count >= remain:
                 break
             ActionChains(self.browser).move_to_element(tr).perform()
-            
+
             visitor = self.parse_tr(tr)
-            
+
+            if not self.is_mail_needed(visitor):
+                continue
+
             rps = []
             for pv in visitor['pv-detail']:
                 url = pv['page']
@@ -356,7 +367,7 @@ class Visitor:
                                 if rp not in rps:
                                     rps.append(rp)
                             break
-            
+
             self.mail_to_visitor(tr, rps)
             count += 1
 
@@ -501,3 +512,53 @@ class Visitor:
         finally:
             self.browser.close()
             self.browser.switch_to_window(self.browser.window_handles[0])
+
+    def is_mail_needed(self, visitor):
+
+        if int(visitor['mail_sent_count']) > 0:
+            print('mail_sent_count > 0')
+            return False
+
+        if visitor['region'].lower() == 'china':
+            print('region is in china')
+            return False
+
+        mini_site_acts = ', '.join(visitor['minisite-acts'])
+        if '已发起询盘' in mini_site_acts:
+            print('已发起询盘')
+            return False
+        if '已发起TradeManager咨询' in mini_site_acts:
+            print('已发起TradeManager咨询')
+            return False
+
+        rkws = ['lash', 'fan', 'volume', 'exten', 'cils', 'wimpern', 'pesta']
+        found = False
+        for kw in visitor['keywords']:
+            kw = kw.lower()
+            for rkw in rkws:
+                if rkw in kw:
+                    found = True
+                    break
+            if found:
+                break
+        if not visitor['keywords']:
+            found = True
+
+        pv_count = int(visitor['pv'])
+        stay = visitor['stay']
+        if stay == '-':
+            stay = 0
+        else:
+            stay = int(stay.split('s')[0])
+        if pv_count < 2 and stay < 10 and not found:
+            print('pv_count < 2 and stay < 10 and absence of realated keywords')
+            return False
+
+        now = pendulum.now()
+        dt_1500 = pendulum.parse('15:00', tz='Asia/Shanghai')
+        dt_1600 = pendulum.parse('16:00', tz='Asia/Shanghai')
+        if now < dt_1500 or now > dt_1600:
+            if pv_count < 2 and stay < 10 and found:
+                print('(<15:00 or >16:00) and pv_count < 2 and stay < 10')
+                return False
+        return True
